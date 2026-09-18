@@ -1,6 +1,6 @@
 /* Pill ledger service worker.
    Bump VERSION whenever index.html or any other shell file changes. */
-var VERSION = "v7";
+var VERSION = "v8";
 var CACHE = "pill-ledger-" + VERSION;
 var CACHE_PREFIX = "pill-ledger-";
 

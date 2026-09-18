@@ -128,6 +128,7 @@
     .card .open .name { display: block; font-weight: 700; font-size: 1.1rem; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .card .open .sub { display: block; color: var(--muted); font-size: 0.9rem; font-weight: 500; }
     .card .open svg { width: 20px; height: 20px; color: var(--muted); flex: none; }
+    .card .open:focus-visible { outline: 3px solid var(--accent); outline-offset: -3px; border-radius: var(--radius) var(--radius) 0 0; }
     .doses { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 16px 12px; align-items: center; }
     .doses button { min-height: 48px; padding: 8px 18px; border-radius: 999px; font-size: 1rem; flex: 1 1 auto; box-shadow: none; }
     .doses button.taken { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
@@ -140,8 +141,27 @@
     .status.danger { color: var(--danger); }
     .status.ok { color: var(--muted); }
 
+    /* Detail banner: the one thing that matters, with one action */
+    .banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border-radius: 12px; margin-bottom: 12px; font-weight: 600; line-height: 1.35; }
+    .banner.ok, .banner.info { background: var(--accent-soft); color: var(--accent-strong); }
+    .banner.warn { background: var(--warn-soft); color: var(--warn); }
+    .banner.danger { background: var(--danger-soft); color: var(--danger); }
+    .banner button { flex: none; box-shadow: none; }
+    .stat .value.hero { font-size: 1.5rem; line-height: 1.2; }
+
+    /* Segmented entry type */
+    .seg { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; border: 1px solid var(--line); border-radius: 12px; padding: 4px; margin: 0; background: var(--bg); min-width: 0; }
+    .seg legend { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+    .segopt { display: block; position: relative; }
+    .segopt input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; min-height: 0; }
+    .segopt span { display: block; text-align: center; padding: 10px 4px; border-radius: 9px; font-weight: 600; font-size: 0.9rem; color: var(--muted); }
+    .segopt input:checked + span { background: var(--card); color: var(--text); box-shadow: var(--shadow); }
+    .segopt input:focus-visible + span { outline: 3px solid var(--accent); outline-offset: -2px; }
+
     /* Detail screen */
     .detail h2 { font-size: 1.35rem; margin: 0; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    h2.detail { font-size: 1.35rem; margin: 0; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    h2.detail:focus { outline: none; }
     .panel { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 14px 16px; margin-bottom: 12px; }
     .panel h3 { margin: 0 0 10px; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
     .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; }
@@ -159,7 +179,7 @@
     .notes.small { font-size: 0.8rem; margin-top: 8px; }
     .notes.warn { color: var(--danger); }
     .entries { list-style: none; margin: 0; padding: 0; }
-    .entries li { display: grid; grid-template-columns: 92px 1fr auto; gap: 8px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 0.92rem; }
+    .entries li { display: grid; grid-template-columns: minmax(64px, auto) 1fr auto; gap: 8px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 0.92rem; }
     .entries li:last-child { border-bottom: 0; }
     .entries .date { color: var(--muted); font-variant-numeric: tabular-nums; }
     .entries .kind { font-weight: 600; }
@@ -170,6 +190,8 @@
     form.entry .full { grid-column: 1 / -1; }
     label { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; font-weight: 600; color: var(--muted); }
     label .hint { font-weight: 400; font-size: 0.78rem; line-height: 1.35; }
+    label .error { color: var(--danger); font-size: 0.8rem; font-weight: 600; }
+    input[aria-invalid="true"], select[aria-invalid="true"], textarea[aria-invalid="true"] { border-color: var(--danger); }
     input, select, textarea {
       font: inherit; color: var(--text); background: var(--bg);
       border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; min-height: 44px; width: 100%;
@@ -186,14 +208,14 @@
     details.more { border-top: 1px solid var(--line); padding-top: 8px; }
     details.more summary { cursor: pointer; font-weight: 600; color: var(--accent); padding: 8px 0; list-style: none; }
     details.more summary::-webkit-details-marker { display: none; }
-    details.more summary::before { content: "+ "; }
-    details.more[open] summary::before { content: "\2212  "; }
+    details.more[open] summary .show { display: none; }
+    details.more:not([open]) summary .hide { display: none; }
     details.more .inner { display: grid; gap: 12px; padding-top: 6px; }
     .hidden { display: none !important; }
 
     /* Dialogs */
     dialog {
-      border: 1px solid var(--line); border-radius: 18px; background: var(--card); color: var(--text); padding: 0;
+      border: 0; border-radius: 18px; background: var(--card); color: var(--text); padding: 0;
       width: min(560px, calc(100vw - 32px)); box-shadow: 0 20px 60px rgba(0,0,0,0.25);
       max-height: calc(100vh - 32px);
     }
@@ -213,6 +235,9 @@
     }
     #update-bar.show { display: flex; }
     #update-bar button { background: var(--on-accent); color: var(--accent); border-color: var(--on-accent); box-shadow: none; }
+    #update-bar.show ~ #toast { bottom: calc(84px + env(safe-area-inset-bottom)); }
+    button.danger-fill { background: var(--danger); color: #fff; border-color: var(--danger); }
+    @media (prefers-color-scheme: dark) { button.danger-fill { color: #2A0C0A; } }
 
     #toast {
       position: fixed; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom)); transform: translateX(-50%) translateY(20px);
@@ -220,12 +245,14 @@
       opacity: 0; pointer-events: none; transition: opacity 0.2s ease, transform 0.2s ease; z-index: 30; max-width: calc(100vw - 32px);
     }
     #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    #toast.action { pointer-events: auto; display: flex; align-items: center; gap: 14px; border-radius: 14px; padding: 8px 8px 8px 16px; }
+    #toast button { background: transparent; border: 0; box-shadow: none; color: inherit; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; min-height: 36px; padding: 4px 10px; }
   </style>
 </head>
 <body>
 <main>
   <header class="top" id="top"></header>
-  <section id="screen" aria-live="polite"></section>
+  <section id="screen"></section>
 </main>
 
 <div id="update-bar" role="status">
@@ -255,7 +282,7 @@
     </label>
     <label class="switch">
       <input name="trackDoses" type="checkbox">
-      <span>Log each dose with AM and PM buttons</span>
+      <span>Log each dose with AM and PM buttons. Pills per day then comes from the dose amounts.</span>
     </label>
     <div id="slots-block" class="hidden">
       <span class="hint">Dose buttons. Leave a label blank to skip it.</span>
@@ -278,15 +305,15 @@
       <label>Days supply per fill
         <input name="daysSupply" type="number" inputmode="numeric" min="1" step="1" value="30">
       </label>
+      <label>Last pickup date
+        <input name="lastFill" type="date">
+        <span class="hint">Starts the pickup schedule until you log a refill.</span>
+      </label>
     </div>
     <details class="more" id="more-settings">
-      <summary>More settings</summary>
+      <summary><span class="show">More settings</span><span class="hide">Hide settings</span></summary>
       <div class="inner">
         <div class="grid2">
-          <label>Last pickup date
-            <input name="lastFill" type="date">
-            <span class="hint">Used until you log a refill.</span>
-          </label>
           <label>Early pickup (days before due)
             <input name="earlyDays" type="number" inputmode="numeric" min="0" step="1" value="2">
           </label>
@@ -319,13 +346,16 @@
   </form>
 </dialog>
 
-<dialog id="confirm-dialog">
+<dialog id="confirm-dialog" aria-labelledby="confirm-title" aria-describedby="confirm-text">
   <div class="box">
-    <h2 id="confirm-title">Are you sure?</h2>
+    <h2 id="confirm-title">Confirm</h2>
     <p class="help" id="confirm-text"></p>
-    <div class="row end">
-      <button type="button" data-close>Cancel</button>
-      <button type="button" class="primary" id="confirm-ok">Confirm</button>
+    <div class="row split">
+      <button type="button" id="confirm-alt" class="hidden">Copy backup</button>
+      <span class="row end" style="margin-left:auto">
+        <button type="button" data-close>Cancel</button>
+        <button type="button" class="primary" id="confirm-ok">Confirm</button>
+      </span>
     </div>
   </div>
 </dialog>
@@ -375,6 +405,10 @@
   }
   function fmtShort(s) {
     return new Date(toUTC(s)).toLocaleDateString(undefined, { month: "short", day: "numeric", timeZone: "UTC" });
+  }
+  // Month and day only while the year is the current one.
+  function fmtSmart(s) {
+    return s.slice(0, 4) === todayStr().slice(0, 4) ? fmtShort(s) : fmtDate(s);
   }
   function fmtNum(n) {
     if (!isFinite(n)) return "";
@@ -564,11 +598,18 @@
   var BACK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>';
   var DOTS = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>';
 
-  function render() {
+  // opts.scroll: jump to top (screen changes only). opts.focus: selector or
+  // element to focus after the DOM is rebuilt, so keyboard users are not dropped.
+  function render(opts) {
+    opts = opts || {};
     var med = view.screen === "detail" ? findMed(view.id) : null;
     if (view.screen === "detail" && !med) { view = { screen: "home", id: null }; }
     if (view.screen === "detail") renderDetail(med); else renderHome();
-    window.scrollTo(0, 0);
+    if (opts.scroll) window.scrollTo(0, 0);
+    if (opts.focus) {
+      var el = typeof opts.focus === "string" ? document.querySelector(opts.focus) : opts.focus;
+      if (el && el.focus) el.focus({ preventScroll: !opts.scroll });
+    }
   }
 
   function renderHome() {
@@ -584,7 +625,10 @@
   }
 
   function renderCard(med, a, today) {
-    var sub = fmtNum(a.count) + " pills" + (isFinite(a.days) ? ", " + a.days + (a.days === 1 ? " day" : " days") + " left" : "");
+    var sub = fmtNum(a.count) + " pills";
+    if (med.perDay <= 0) sub += ", no daily dose set";
+    else if (a.count <= 0 && a.nextFill) sub += ", pickup " + windowText(med, a.nextFill, today);
+    else if (isFinite(a.days)) sub += ", " + a.days + (a.days === 1 ? " day" : " days") + " left";
     var st = statusLine(med, a, today);
     var doses = "";
     if (med.trackDoses) {
@@ -598,12 +642,12 @@
       var quick = showQuick ? QUICK_AMOUNTS.map(function (q) {
         return '<button type="button" class="qty" data-action="dose-qty" data-qty="' + q + '" aria-label="Log ' + pillWord(q) + '">' + (q === 0.5 ? "1/2" : fmtNum(q)) + "</button>";
       }).join("") : "";
-      var other = med.slots.length ? '<button type="button" class="other" data-action="other" aria-expanded="' + !!otherOpen[med.id] + '">' + (otherOpen[med.id] ? "Hide" : "Other") + "</button>" : "";
-      doses = '<div class="doses">' + slots + other + quick + "</div>";
+      var other = med.slots.length ? '<button type="button" class="other" data-action="other" aria-expanded="' + !!otherOpen[med.id] + '" aria-controls="quick-' + med.id + '">' + (otherOpen[med.id] ? "Hide" : "Other") + "</button>" : "";
+      doses = '<div class="doses" id="quick-' + med.id + '">' + slots + other + quick + "</div>";
     }
-    return '<article class="card" data-id="' + med.id + '">' +
-      '<button type="button" class="open" data-action="open" aria-label="Open ' + esc(med.name) + '">' +
-        '<span class="txt"><span class="name">' + esc(med.name) + '</span><span class="sub">' + sub + "</span></span>" + CHEVRON +
+    return '<article class="card" data-id="' + med.id + '" aria-labelledby="name-' + med.id + '">' +
+      '<button type="button" class="open" data-action="open">' +
+        '<span class="txt"><span class="name" id="name-' + med.id + '">' + esc(med.name) + '</span><span class="sub">' + sub + "</span></span>" + CHEVRON +
       "</button>" +
       doses +
       '<div class="status ' + st.level + '">' + st.text + "</div>" +
@@ -613,8 +657,8 @@
   function renderDetail(med) {
     var today = todayStr();
     var a = analyze(med, today);
-    topEl.innerHTML = '<button type="button" class="icon" data-action="back" aria-label="Back">' + BACK + "</button>" +
-      '<h2 class="detail">' + esc(med.name) + "</h2>" +
+    topEl.innerHTML = '<button type="button" class="icon" data-action="back" aria-label="Back to all medications">' + BACK + "</button>" +
+      '<h2 class="detail" tabindex="-1">' + esc(med.name) + "</h2>" +
       '<button type="button" data-action="edit">Edit</button>';
 
     var daysText = isFinite(a.days) ? a.days + (a.days === 1 ? " day" : " days") : "No daily dose";
@@ -623,17 +667,21 @@
       var cls = a.extra.pills < 0 ? "neg" : a.extra.pills > 0 ? "pos" : "";
       var sign = a.extra.pills > 0 ? "+" : "";
       var daysPart = a.extra.days == null ? "" : ' <span class="sub">(' + sign + fmtNum(a.extra.days) + " days)</span>";
-      extraHtml = '<span class="value ' + cls + '">' + sign + fmtNum(a.extra.pills) + " pills" + daysPart + "</span>";
+      extraHtml = '<span class="value ' + cls + '">' + sign + fmtNum(a.extra.pills) + " pills" + daysPart + "</span>" +
+        '<span class="sub">Needs ' + fmtNum(a.extra.needed) + " by " + fmtShort(a.nextEarliest) + ", you have " + fmtNum(a.count) + "</span>";
     } else {
       extraHtml = '<span class="value">No schedule yet</span>';
     }
     var supply = '<div class="panel"><h3>Supply</h3><div class="stats">' +
-      '<div class="stat"><span class="label">On hand</span><span class="value">' + fmtNum(a.count) + ' pills</span><span class="sub">' + fmtNum(med.perDay) + " per day" + (med.trackDoses ? ", dose logging on" : "") + "</span></div>" +
-      '<div class="stat"><span class="label">Days left</span><span class="value">' + daysText + '</span><span class="sub">Runs out ' + (a.runOut ? fmtDate(a.runOut) : "n/a") + "</span></div>" +
-      '<div class="stat"><span class="label">Extra at earliest pickup</span>' + extraHtml + "</div>" +
+      '<div class="stat"><span class="label">On hand</span><span class="value hero">' + fmtNum(a.count) + ' pills</span><span class="sub">' + fmtNum(med.perDay) + " per day" + (med.trackDoses ? ", dose logging on" : "") + "</span></div>" +
+      '<div class="stat"><span class="label">Days left</span><span class="value hero">' + daysText + '</span><span class="sub">Runs out ' + (a.runOut ? fmtDate(a.runOut) : "n/a") + "</span></div>" +
+      '<div class="stat"><span class="label">Spare at next pickup</span>' + extraHtml + "</div>" +
       "</div></div>";
 
     var st = statusLine(med, a, today);
+    var bannerAction = (a.status === "out" || a.status === "shortfall" || a.status === "low")
+      ? '<button type="button" class="small" data-action="go-refill">Log refill</button>' : "";
+    var banner = '<div class="banner ' + st.level + '" role="status"><span>' + st.text + "</span>" + bannerAction + "</div>";
     var pickups;
     if (a.fills.length) {
       var anchorText = a.pickup.source === "refill" ? "From refill on " + fmtDate(a.pickup.date) : "From last pickup date, " + fmtDate(a.pickup.date);
@@ -658,14 +706,14 @@
 
     var notes = med.notes ? '<div class="panel"><h3>Notes</h3><p class="notes">' + esc(med.notes) + "</p></div>" : "";
 
-    var entryForm = '<div class="panel"><h3>Log an entry</h3>' +
-      '<form class="entry" data-action="add-entry">' +
-        '<label>Type<select name="type">' +
-          '<option value="refill">Refill (picked up pills)</option>' +
-          '<option value="recount">Recount (set total)</option>' +
-          '<option value="adjust">Adjust (plus or minus)</option>' +
-          '<option value="dose">Dose (pills taken)</option>' +
-        "</select></label>" +
+    var entryForm = '<div class="panel" id="entry-panel"><h3>Log an entry</h3>' +
+      '<form class="entry" data-action="add-entry" novalidate>' +
+        '<fieldset class="seg full"><legend>Entry type</legend>' +
+          ENTRY_TYPES.map(function (t, i) {
+            return '<label class="segopt"><input type="radio" name="type" value="' + t.v + '"' + (i === 0 ? " checked" : "") + "><span>" + t.l + "</span></label>";
+          }).join("") +
+        "</fieldset>" +
+        '<p class="notes small full" data-role="type-help" style="margin-top:0">' + ENTRY_TYPES[0].help + "</p>" +
         '<label>Quantity<input name="qty" type="number" inputmode="decimal" step="0.5" required></label>' +
         '<label>Date<input name="date" type="date" value="' + today + '" required></label>' +
         '<label>Note<input name="note" autocomplete="off" placeholder="Optional"></label>' +
@@ -678,33 +726,45 @@
           var kind = { refill: "Refill", recount: "Recount", adjust: "Adjust", dose: "Dose" + (e.slot ? " " + esc(e.slot) : "") }[e.type];
           var qty = e.type === "recount" ? "= " + fmtNum(e.qty) : e.type === "dose" ? "took " + fmtNum(e.qty) : (e.qty >= 0 ? "+" : "") + fmtNum(e.qty);
           return "<li>" +
-            '<span class="date">' + fmtDate(e.date) + "</span>" +
+            '<span class="date">' + fmtSmart(e.date) + "</span>" +
             '<span><span class="kind">' + kind + "</span> " + qty + (e.note ? '<div class="note">' + esc(e.note) + "</div>" : "") + "</span>" +
             '<button type="button" class="small link danger" data-action="del-entry" data-entry="' + e.id + '" aria-label="Delete entry">Delete</button>' +
             "</li>";
         }).join("") + "</ul>"
       : '<p class="notes">No entries yet.</p>') + "</div>";
 
-    screenEl.innerHTML = '<div class="status ' + st.level + '" style="border:0;padding:0 2px 12px">' + st.text + "</div>" +
-      supply + pickups + rx + notes + entryForm + history +
-      '<div class="row end"><button type="button" class="danger" data-action="delete">Delete medication</button></div>';
+    screenEl.innerHTML = banner + supply + pickups + rx + notes + entryForm + history +
+      '<div class="row end" style="margin-top:20px"><button type="button" class="danger-fill" data-action="delete">Delete ' + esc(med.name) + "</button></div>";
   }
+
+  var ENTRY_TYPES = [
+    { v: "refill", l: "Refill", help: "Pills you picked up. Adds to the count and anchors the pickup schedule." },
+    { v: "recount", l: "Recount", help: "What is in the bottle right now. Becomes the new starting point." },
+    { v: "adjust", l: "Adjust", help: "Plus or minus a few pills, for a spill or a found strip." },
+    { v: "dose", l: "Dose", help: "Pills you took, for a past date or an amount the buttons do not cover." }
+  ];
 
   // ---------- Navigation ----------
   function openDetail(id) {
     view = { screen: "detail", id: id };
     otherOpen = {};
     history.pushState({ screen: "detail", id: id }, "");
-    render();
+    render({ scroll: true, focus: "#top h2" });
   }
   function goHome() {
     if (history.state && history.state.screen === "detail") history.back();
-    else { view = { screen: "home", id: null }; render(); }
+    else { var id = view.id; view = { screen: "home", id: null }; render({ scroll: true, focus: id ? '[data-id="' + id + '"] .open' : "#top button" }); }
   }
   window.addEventListener("popstate", function (ev) {
     var s = ev.state;
-    view = s && s.screen === "detail" && findMed(s.id) ? { screen: "detail", id: s.id } : { screen: "home", id: null };
-    render();
+    var wasId = view.id;
+    if (s && s.screen === "detail" && findMed(s.id)) {
+      view = { screen: "detail", id: s.id };
+      render({ scroll: true, focus: "#top h2" });
+    } else {
+      view = { screen: "home", id: null };
+      render({ scroll: true, focus: wasId ? '[data-id="' + wasId + '"] .open' : null });
+    }
   });
   history.replaceState({ screen: "home" }, "");
 
@@ -720,13 +780,25 @@
     b.addEventListener("click", function () { b.closest("dialog").close(); });
   });
 
-  function confirmBox(title, text, cb, okLabel) {
+  // opts.danger styles the primary as destructive; opts.alt adds a secondary
+  // button (label, fn) that runs without closing the dialog.
+  var confirmAltFn = null;
+  function confirmBox(title, text, cb, okLabel, opts) {
+    opts = opts || {};
     document.getElementById("confirm-title").textContent = title;
     document.getElementById("confirm-text").textContent = text;
-    document.getElementById("confirm-ok").textContent = okLabel || "Confirm";
+    var ok = document.getElementById("confirm-ok");
+    ok.textContent = okLabel || "Confirm";
+    ok.classList.toggle("danger-fill", !!opts.danger);
+    ok.classList.toggle("primary", !opts.danger);
+    var alt = document.getElementById("confirm-alt");
+    alt.classList.toggle("hidden", !opts.alt);
+    if (opts.alt) alt.textContent = opts.alt.label;
+    confirmAltFn = opts.alt ? opts.alt.fn : null;
     confirmCb = cb;
     confirmDialog.showModal();
   }
+  document.getElementById("confirm-alt").addEventListener("click", function () { if (confirmAltFn) confirmAltFn(); });
   document.getElementById("confirm-ok").addEventListener("click", function () {
     if (!confirmDialog.open) { confirmCb = null; return; }
     var cb = confirmCb;
@@ -739,12 +811,47 @@
   confirmDialog.addEventListener("click", function (ev) { if (ev.target === confirmDialog) confirmDialog.close(); });
 
   var toastTimer = null;
-  function toast(msg) {
+  // action: optional { label, fn } rendered as a button inside the toast (used for Undo).
+  function toast(msg, action) {
     var t = document.getElementById("toast");
     t.textContent = msg;
+    if (action) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.textContent = action.label;
+      b.addEventListener("click", function () { t.classList.remove("show", "action"); action.fn(); });
+      t.appendChild(b);
+    }
+    t.classList.toggle("action", !!action);
     t.classList.add("show");
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(function () { t.classList.remove("show"); }, 2600);
+    toastTimer = setTimeout(function () { t.classList.remove("show", "action"); }, action ? 6000 : 2600);
+  }
+
+  // Inline field error: message under the field, aria wiring, cleared on input.
+  function fieldError(input, msg) {
+    var host = input.closest("label") || input.parentNode;
+    var err = host.querySelector(".error");
+    if (!err) {
+      err = document.createElement("span");
+      err.className = "error";
+      err.id = "err-" + (input.name || uid());
+      host.appendChild(err);
+    }
+    err.textContent = msg;
+    input.setAttribute("aria-invalid", "true");
+    input.setAttribute("aria-describedby", err.id);
+    input.focus();
+    input.addEventListener("input", function clear() {
+      err.remove();
+      input.removeAttribute("aria-invalid");
+      input.removeAttribute("aria-describedby");
+      input.removeEventListener("input", clear);
+    });
+  }
+  function clearErrors(form) {
+    form.querySelectorAll(".error").forEach(function (e) { e.remove(); });
+    form.querySelectorAll("[aria-invalid]").forEach(function (i) { i.removeAttribute("aria-invalid"); i.removeAttribute("aria-describedby"); });
   }
 
   // ---------- Medication form ----------
@@ -757,6 +864,7 @@
 
   function openMedDialog(med) {
     medForm.reset();
+    clearErrors(medForm);
     var f = medForm.elements;
     document.getElementById("med-dialog-title").textContent = med ? "Edit medication" : "Add medication";
     document.getElementById("start-count-label").classList.toggle("hidden", !!med);
@@ -790,11 +898,11 @@
     ev.preventDefault();
     var f = medForm.elements;
     var name = f.name.value.trim();
-    if (!name) { f.name.focus(); toast("Name is required."); return; }
+    if (!name) { fieldError(f.name, "Give the medication a name."); return; }
     var perDay = Number(f.perDay.value);
-    if (!(perDay >= 0)) { f.perDay.focus(); toast("Pills per day must be zero or more."); return; }
+    if (!(perDay >= 0)) { fieldError(f.perDay, "Pills per day must be zero or more."); return; }
     var lastFill = f.lastFill.value;
-    if (lastFill && !isDate(lastFill)) { f.lastFill.focus(); toast("Pickup date is not valid."); return; }
+    if (lastFill && !isDate(lastFill)) { fieldError(f.lastFill, "Enter a full date."); return; }
     var slots = [];
     for (var si = 1; si <= 3; si++) {
       var lbl = f["slot" + si + "Label"].value.trim().slice(0, 12);
@@ -851,47 +959,70 @@
     if (!med) return;
     var action = btn.dataset.action;
     var today = todayStr();
+    var cardSel = '[data-id="' + med.id + '"] ';
+    function undoEntry(entryId, label) {
+      return { label: "Undo", fn: function () {
+        med.entries = med.entries.filter(function (e) { return e.id !== entryId; });
+        save(); render(); toast(label + " undone.");
+      } };
+    }
     if (action === "open") {
       openDetail(med.id);
     } else if (action === "other") {
       if (otherOpen[med.id]) delete otherOpen[med.id]; else otherOpen[med.id] = true;
-      render();
+      render({ focus: cardSel + "[data-action=other]" });
     } else if (action === "dose") {
       var slot = btn.dataset.slot;
       var slotQty = Number(btn.dataset.qty) || 0;
+      var slotSel = cardSel + '[data-action=dose][data-slot="' + slot + '"]';
       var existing = med.entries.filter(function (e) { return e.type === "dose" && e.date === today && e.slot === slot; })[0];
       if (existing) {
         confirmBox("Remove today's " + slot + " dose?", med.name + ": " + pillWord(existing.qty) + " will be added back to the count.", function () {
           med.entries = med.entries.filter(function (e) { return e.id !== existing.id; });
-          save(); render(); toast(slot + " dose removed.");
+          save(); render({ focus: slotSel }); toast(slot + " dose removed.");
         }, "OK");
       } else {
-        confirmBox("Log " + slot + " dose?", med.name + ": " + pillWord(slotQty) + ".", function () {
-          med.entries.push({ id: uid(), type: "dose", qty: slotQty, date: today, note: "", slot: slot });
-          save(); render(); toast(slot + " dose logged.");
-        }, "OK");
+        var entry = { id: uid(), type: "dose", qty: slotQty, date: today, note: "", slot: slot };
+        med.entries.push(entry);
+        save(); render({ focus: slotSel });
+        toast(slot + " dose logged, " + pillWord(slotQty) + ".", undoEntry(entry.id, slot + " dose"));
       }
     } else if (action === "dose-qty") {
       var q = Number(btn.dataset.qty) || 0;
-      confirmBox("Log " + pillWord(q) + "?", med.name + ", today.", function () {
-        med.entries.push({ id: uid(), type: "dose", qty: q, date: today, note: "", slot: "" });
-        save(); render(); toast("Logged " + pillWord(q) + ".");
-      }, "OK");
+      var qEntry = { id: uid(), type: "dose", qty: q, date: today, note: "", slot: "" };
+      med.entries.push(qEntry);
+      save(); render({ focus: cardSel + '[data-action=dose-qty][data-qty="' + q + '"]' });
+      toast("Logged " + pillWord(q) + ".", undoEntry(qEntry.id, "Dose"));
+    } else if (action === "go-refill") {
+      var refillRadio = screenEl.querySelector('input[name=type][value=refill]');
+      if (refillRadio) { refillRadio.checked = true; refillRadio.dispatchEvent(new Event("change", { bubbles: true })); }
+      var panel = document.getElementById("entry-panel");
+      if (panel) panel.scrollIntoView({ behavior: "smooth", block: "start" });
+      var qtyInput = screenEl.querySelector("input[name=qty]");
+      if (qtyInput) { if (!qtyInput.value && med.daysSupply && med.perDay) qtyInput.value = fmtNum(med.daysSupply * med.perDay); qtyInput.focus({ preventScroll: true }); }
     } else if (action === "delete") {
       confirmBox("Delete " + med.name + "?", "This removes the medication and its whole history. Copy a backup first if you want to keep it.", function () {
         state.meds = state.meds.filter(function (m) { return m.id !== med.id; });
-        save(); toast("Deleted.");
+        save(); toast(med.name + " deleted.");
         goHome();
-      });
+      }, "Delete " + med.name, { danger: true, alt: { label: "Copy backup", fn: copyBackup } });
     } else if (action === "del-entry") {
       var eid = btn.dataset.entry;
       confirmBox("Delete this entry?", "The current count will be recalculated from the remaining entries.", function () {
         var removed = med.entries.filter(function (e) { return e.id === eid; })[0];
         med.entries = med.entries.filter(function (e) { return e.id !== eid; });
         if (removed && removed.type === "refill" && med.refillsLeft != null) med.refillsLeft++;
-        save(); render(); toast("Entry deleted.");
-      });
+        save(); render({ focus: "#entry-panel input[name=qty]" }); toast("Entry deleted.");
+      }, "Delete entry", { danger: true });
     }
+  });
+
+  // Entry type help text follows the selected segment.
+  screenEl.addEventListener("change", function (ev) {
+    if (!ev.target.matches || !ev.target.matches("input[name=type]")) return;
+    var t = ENTRY_TYPES.filter(function (x) { return x.v === ev.target.value; })[0];
+    var help = screenEl.querySelector("[data-role=type-help]");
+    if (t && help) help.textContent = t.help;
   });
 
   screenEl.addEventListener("submit", function (ev) {
@@ -900,17 +1031,24 @@
     ev.preventDefault();
     var med = findMed(view.id);
     if (!med) return;
+    clearErrors(form);
     var type = form.elements.type.value;
     var qty = Number(form.elements.qty.value);
     var date = form.elements.date.value;
-    if (isNaN(qty) || form.elements.qty.value === "") { form.elements.qty.focus(); toast("Enter a quantity."); return; }
-    if (!isDate(date)) { form.elements.date.focus(); toast("Enter a valid date."); return; }
-    if (type !== "adjust" && qty < 0) { form.elements.qty.focus(); toast("Quantity cannot be negative for this type."); return; }
-    if (type === "dose" && qty <= 0) { form.elements.qty.focus(); toast("Enter how many pills you took."); return; }
-    med.entries.push({ id: uid(), type: type, qty: qty, date: date, note: form.elements.note.value.trim(), slot: "" });
+    if (isNaN(qty) || form.elements.qty.value === "") { fieldError(form.elements.qty, "Enter a quantity."); return; }
+    if (!isDate(date)) { fieldError(form.elements.date, "Enter a full date."); return; }
+    if (type !== "adjust" && qty < 0) { fieldError(form.elements.qty, "Use Adjust to take pills away."); return; }
+    if (type === "dose" && qty <= 0) { fieldError(form.elements.qty, "Enter how many pills you took."); return; }
+    var newEntry = { id: uid(), type: type, qty: qty, date: date, note: form.elements.note.value.trim(), slot: "" };
+    med.entries.push(newEntry);
     if (type === "refill" && med.refillsLeft != null && med.refillsLeft > 0) med.refillsLeft--;
-    save(); render();
-    toast({ refill: "Refill logged.", recount: "Recount saved.", adjust: "Adjustment logged.", dose: "Dose logged." }[type]);
+    save(); render({ focus: "#entry-panel input[name=qty]" });
+    var label = { refill: "Refill", recount: "Recount", adjust: "Adjustment", dose: "Dose" }[type];
+    toast(label + " logged.", { label: "Undo", fn: function () {
+      med.entries = med.entries.filter(function (e) { return e.id !== newEntry.id; });
+      if (type === "refill" && med.refillsLeft != null) med.refillsLeft++;
+      save(); render(); toast(label + " undone.");
+    } });
   });
 
   // ---------- Backup ----------
@@ -927,8 +1065,7 @@
     setTimeout(function () { ta.focus(); if (!restoreMode) ta.select(); }, 0);
   }
 
-  document.getElementById("copy-btn").addEventListener("click", function () {
-    menuDialog.close();
+  function copyBackup() {
     var text = backupText();
     var fallback = function () {
       showTextDialog("Copy backup", "Select all of the text below and copy it.", text, false);
@@ -938,6 +1075,10 @@
     } else {
       fallback();
     }
+  }
+  document.getElementById("copy-btn").addEventListener("click", function () {
+    menuDialog.close();
+    copyBackup();
   });
 
   function restoreFrom(text) {
@@ -946,13 +1087,16 @@
     var next = normalize(parsed);
     if (!next) { toast("That text is not a pill ledger backup."); return; }
     var n = next.meds.length;
-    confirmBox("Replace current data?", "This will replace everything in this app with the backup (" + n + (n === 1 ? " medication" : " medications") + ").", function () {
+    var current = state.meds.map(function (m) { return m.name; });
+    var text = "The backup has " + n + (n === 1 ? " medication" : " medications") + " (" + next.meds.map(function (m) { return m.name; }).join(", ") + ").";
+    if (current.length) text += " It replaces what is here now (" + current.join(", ") + "). Copy a backup of that first if you want to keep it.";
+    confirmBox("Replace current data?", text, function () {
       state = next;
       view = { screen: "home", id: null };
-      save(); render();
+      save(); render({ scroll: true, focus: "#top button" });
       if (textDialog.open) textDialog.close();
       toast("Backup restored.");
-    });
+    }, "Replace", { danger: true, alt: current.length ? { label: "Copy backup", fn: copyBackup } : null });
   }
 
   document.getElementById("paste-btn").addEventListener("click", function () {
