@@ -147,9 +147,9 @@
     .med summary::-webkit-details-marker { display: none; }
     .med summary:focus-visible { outline: 3px solid var(--accent); outline-offset: -3px; }
     .med .name { font-weight: 700; font-size: 1.1rem; margin: 0; grid-column: 1; }
+    .chips { grid-column: 2; grid-row: 1; align-self: start; display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+    .chip.review { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; padding: 3px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-strong); border: 1px solid var(--accent); white-space: nowrap; }
     .status {
-      grid-column: 2; grid-row: 1;
-      align-self: start;
       font-size: 0.75rem;
       font-weight: 700;
       letter-spacing: 0.04em;
@@ -330,6 +330,16 @@
         <input name="daysSupply" type="number" inputmode="numeric" min="1" step="1" value="30">
       </label>
     </div>
+    <div class="grid2">
+      <label>Early pickup (days before due)
+        <input name="earlyDays" type="number" inputmode="numeric" min="0" step="1" value="2">
+        <span class="hint">How early the pharmacy lets you collect. Use 0 or 1 for controlled medications.</span>
+      </label>
+      <label>Reminder (days before due)
+        <input name="reminderDays" type="number" inputmode="numeric" min="0" step="1" value="4">
+        <span class="hint">Shows a Check pharmacy chip so you can review the pharmacy app.</span>
+      </label>
+    </div>
     <label>Low supply warning (days left)
       <input name="threshold" type="number" inputmode="numeric" min="0" step="1" value="7">
     </label>
@@ -431,6 +441,8 @@
         threshold: Math.max(0, Math.floor(Number(m.threshold) || 0)),
         lastFill: isDate(m.lastFill) ? m.lastFill : "",
         daysSupply: Math.max(0, Math.floor(Number(m.daysSupply) || 0)),
+        earlyDays: m.earlyDays == null ? 2 : Math.max(0, Math.floor(Number(m.earlyDays) || 0)),
+        reminderDays: m.reminderDays == null ? 4 : Math.max(0, Math.floor(Number(m.reminderDays) || 0)),
         notes: String(m.notes || ""),
         entries: Array.isArray(m.entries) ? m.entries.filter(function (e) {
           return e && isDate(e.date) && ["refill", "recount", "adjust"].indexOf(e.type) >= 0;
@@ -514,12 +526,27 @@
     var days = daysRemaining(c.count, med.perDay);
     var fills = nextFillDates(med, today, FILL_COUNT);
     var nextFill = fills.length ? fills[0] : null;
-    var extra = extraSupply(c.count, med.perDay, today, nextFill);
+    // Earliest allowed pickup for the next due date, never before today.
+    var nextEarliest = nextFill ? earliestPickup(med, nextFill, today) : null;
+    var extra = extraSupply(c.count, med.perDay, today, nextEarliest);
+    var reminder = !!nextFill && daysBetween(today, nextFill) <= med.reminderDays;
     var status = "ok";
     if (c.count <= 0 && med.perDay > 0) status = "out";
     else if (extra && extra.pills < 0) status = "shortfall";
     else if (isFinite(days) && days <= med.threshold) status = "low";
-    return { count: c.count, anchorDate: c.anchorDate, days: days, runOut: runOutDate(today, days), fills: fills, nextFill: nextFill, extra: extra, status: status, pickup: lastPickupDate(med, today) };
+    return { count: c.count, anchorDate: c.anchorDate, days: days, runOut: runOutDate(today, days), fills: fills, nextFill: nextFill, nextEarliest: nextEarliest, extra: extra, reminder: reminder, status: status, pickup: lastPickupDate(med, today) };
+  }
+
+  function earliestPickup(med, due, today) {
+    var e = addDays(due, -med.earlyDays);
+    return e < today ? today : e;
+  }
+  function fmtShort(s) {
+    return new Date(toUTC(s)).toLocaleDateString(undefined, { month: "short", day: "numeric", timeZone: "UTC" });
+  }
+  function windowText(med, due, today) {
+    var e = earliestPickup(med, due, today);
+    return e < due ? fmtShort(e) + " to " + fmtDate(due) : fmtDate(due);
   }
 
   // ---------- Rendering ----------
@@ -537,30 +564,34 @@
       listEl.innerHTML = '<div class="empty"><strong>Nothing tracked yet</strong>Add a medication to start counting pills, projecting when you run out, and planning refills.</div>';
       return;
     }
-    var attention = 0;
+    var attention = 0, review = 0;
     var html = state.meds.map(function (med) {
       var a = analyze(med, today);
       if (a.status !== "ok") attention++;
+      if (a.reminder) review++;
       return renderMed(med, a, today);
     }).join("");
     listEl.innerHTML = html;
     summaryEl.textContent = state.meds.length + (state.meds.length === 1 ? " medication" : " medications") +
-      (attention ? ", " + attention + " need" + (attention === 1 ? "s" : "") + " attention" : ", all fine");
+      (attention ? ", " + attention + " need" + (attention === 1 ? "s" : "") + " attention" : ", all fine") +
+      (review ? ", " + review + " to check at the pharmacy" : "");
   }
 
   function renderMed(med, a, today) {
     var open = openIds[med.id] ? " open" : "";
     var daysText = isFinite(a.days) ? a.days + (a.days === 1 ? " day" : " days") : "No daily dose";
     var runOutText = a.runOut ? fmtDate(a.runOut) : "n/a";
-    var fillText = a.nextFill ? fmtDate(a.nextFill) : "Not set";
+    var fillText = a.nextFill ? windowText(med, a.nextFill, today) : "Not set";
+    var fillSub = med.daysSupply ? "Every " + med.daysSupply + " days" + (med.earlyDays ? ", up to " + med.earlyDays + (med.earlyDays === 1 ? " day" : " days") + " early" : "") : "";
+    if (a.reminder) fillSub = "Due " + fmtShort(a.nextFill) + ". Check the pharmacy app.";
     var extraHtml;
     if (a.extra) {
       var cls = a.extra.pills < 0 ? "neg" : a.extra.pills > 0 ? "pos" : "";
       var sign = a.extra.pills > 0 ? "+" : "";
       var daysPart = a.extra.days == null ? "" : ' <span class="sub">(' + sign + fmtNum(a.extra.days) + " days)</span>";
-      extraHtml = '<div class="stat"><span class="label">Extra at next pickup</span><span class="value ' + cls + '">' + sign + fmtNum(a.extra.pills) + " pills" + daysPart + "</span></div>";
+      extraHtml = '<div class="stat"><span class="label">Extra at earliest pickup</span><span class="value ' + cls + '">' + sign + fmtNum(a.extra.pills) + " pills" + daysPart + "</span></div>";
     } else {
-      extraHtml = '<div class="stat"><span class="label">Extra at next pickup</span><span class="value">No schedule yet</span></div>';
+      extraHtml = '<div class="stat"><span class="label">Extra at earliest pickup</span><span class="value">No schedule yet</span></div>';
     }
 
     var anchorText = "";
@@ -569,7 +600,7 @@
     }
     var fillsHtml = a.fills.length
       ? '<div class="fills">' + a.fills.map(function (d, i) {
-          return "<span" + (i === 0 ? ' class="due"' : "") + ">" + fmtDate(d) + (d === today ? " (today)" : "") + "</span>";
+          return "<span" + (i === 0 ? ' class="due"' : "") + ">" + windowText(med, d, today) + (d === today ? " (today)" : "") + "</span>";
         }).join("") + "</div>" + '<p class="notes anchor">' + anchorText + "</p>"
       : '<p class="notes">Log a refill or set a last pickup date, plus a days supply, to see the schedule.</p>';
 
@@ -590,14 +621,15 @@
     return '<details class="med" data-id="' + med.id + '"' + open + ">" +
       "<summary>" +
         '<h2 class="name">' + esc(med.name) + "</h2>" +
-        '<span class="status ' + a.status + '">' + statusLabel(a.status) + "</span>" +
+        '<div class="chips">' + (a.reminder ? '<span class="chip review">Check pharmacy</span>' : "") +
+          '<span class="status ' + a.status + '">' + statusLabel(a.status) + "</span></div>" +
         '<div class="stats">' +
           '<div class="stat"><span class="label">On hand</span><span class="value">' + fmtNum(a.count) + " pills</span>" +
             '<span class="sub">' + fmtNum(med.perDay) + " per day</span></div>" +
           '<div class="stat"><span class="label">Days left</span><span class="value">' + daysText + "</span>" +
             '<span class="sub">Runs out ' + runOutText + "</span></div>" +
           '<div class="stat"><span class="label">Next pickup</span><span class="value">' + fillText + "</span>" +
-            (med.daysSupply ? '<span class="sub">Every ' + med.daysSupply + " days</span>" : "") + "</div>" +
+            (fillSub ? '<span class="sub">' + fillSub + "</span>" : "") + "</div>" +
           extraHtml +
         "</div>" +
       "</summary>" +
@@ -668,6 +700,8 @@
     medForm.elements.lastFill.value = med ? med.lastFill : "";
     medForm.elements.daysSupply.value = med ? (med.daysSupply || "") : 30;
     medForm.elements.threshold.value = med ? med.threshold : 7;
+    medForm.elements.earlyDays.value = med ? med.earlyDays : 2;
+    medForm.elements.reminderDays.value = med ? med.reminderDays : 4;
     medForm.elements.notes.value = med ? med.notes : "";
     medDialog.showModal();
     setTimeout(function () { medForm.elements.name.focus(); }, 0);
@@ -690,6 +724,8 @@
       med.lastFill = lastFill;
       med.daysSupply = Math.max(0, Math.floor(Number(f.daysSupply.value) || 0));
       med.threshold = Math.max(0, Math.floor(Number(f.threshold.value) || 0));
+      med.earlyDays = Math.max(0, Math.floor(Number(f.earlyDays.value) || 0));
+      med.reminderDays = Math.max(0, Math.floor(Number(f.reminderDays.value) || 0));
       med.notes = f.notes.value.trim();
       toast("Medication updated.");
     } else {
@@ -698,6 +734,8 @@
         id: uid(), name: name, perDay: perDay, lastFill: lastFill,
         daysSupply: Math.max(0, Math.floor(Number(f.daysSupply.value) || 0)),
         threshold: Math.max(0, Math.floor(Number(f.threshold.value) || 0)),
+        earlyDays: Math.max(0, Math.floor(Number(f.earlyDays.value) || 0)),
+        reminderDays: Math.max(0, Math.floor(Number(f.reminderDays.value) || 0)),
         notes: f.notes.value.trim(),
         entries: [{ id: uid(), type: "recount", qty: startCount, date: todayStr(), note: "Starting count" }]
       };

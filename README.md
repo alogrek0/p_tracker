@@ -15,7 +15,9 @@ The current count is derived from the ledger: the latest recount, plus later ref
 - Pills on hand and days left at the current dose.
 - The projected run out date.
 - The next four pharmacy pickup dates, calculated from the date of your latest refill entry plus the days supply. Pharmacies count from the day you picked up the prescription, so the refill entry is the anchor. The manual last pickup date is only used until the first refill is logged.
-- Extra supply at the next pickup: how many pills (and days) you will have left over when the next pickup is due, or how short you will be if the number is negative.
+- A pickup window for each date. Pharmacies usually let you collect a refill a couple of days early, so each medication has an early pickup setting (default 2 days) and the schedule shows "Oct 8 to Oct 10" style windows. Set it to 0 or 1 for controlled medications with stricter rules.
+- A reminder chip. Each medication has a reminder setting (default 4 days before the due date). When the due date is that close, the card shows a Check pharmacy chip and the summary line counts it, so you know to review the pharmacy app.
+- Extra supply at the earliest pickup: how many pills (and days) you will have left over on the first day you can collect the next fill, or how short you will be if the number is negative.
 - A status of OK, Low, Shortfall, or Out. Low uses the per medication warning threshold in days.
 
 The page installs to your home screen, follows your system light or dark setting, and works with no network after the first visit.
