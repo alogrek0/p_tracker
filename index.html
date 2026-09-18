@@ -136,15 +136,24 @@
       margin-bottom: 12px;
       overflow: hidden;
     }
-    .med summary {
-      list-style: none;
-      cursor: pointer;
+    .med .head {
       padding: 14px 16px;
       display: grid;
       grid-template-columns: 1fr auto;
       gap: 6px 12px;
     }
+    .med summary {
+      list-style: none;
+      cursor: pointer;
+      padding: 10px 16px;
+      border-top: 1px solid var(--line);
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--accent);
+    }
     .med summary::-webkit-details-marker { display: none; }
+    .med details[open] > summary .show { display: none; }
+    .med details:not([open]) > summary .hide { display: none; }
     .med summary:focus-visible { outline: 3px solid var(--accent); outline-offset: -3px; }
     .med .name { font-weight: 700; font-size: 1.1rem; margin: 0; grid-column: 1; }
     .chips { grid-column: 2; grid-row: 1; align-self: start; display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
@@ -165,6 +174,14 @@
     }
     .status.low { background: var(--warn-soft); color: var(--warn); }
     .status.shortfall, .status.out { background: var(--danger-soft); color: var(--danger); }
+    .dosebar { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 6px; }
+    .dosebar .today { font-size: 0.8rem; color: var(--muted); margin-right: 4px; }
+    .dosebar button { min-height: 38px; padding: 6px 12px; font-size: 0.9rem; box-shadow: none; border-radius: 999px; }
+    .dosebar button.taken { background: var(--accent); color: #fff; border-color: var(--accent); }
+    @media (prefers-color-scheme: dark) { .dosebar button.taken { color: #06201A; } }
+    .switch { flex-direction: row; align-items: center; gap: 10px; }
+    .switch input { width: 22px; height: 22px; min-height: 0; margin: 0; }
+    .slots { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .stats {
       grid-column: 1 / -1;
       display: grid;
@@ -333,6 +350,21 @@
         <input name="daysSupply" type="number" inputmode="numeric" min="1" step="1" value="30">
       </label>
     </div>
+    <label class="switch">
+      <input name="trackDoses" type="checkbox">
+      <span>Log each dose. The count only goes down when you tap a dose, so recount now and then.</span>
+    </label>
+    <div id="slots-block">
+      <span class="hint">Dose slots (label and pills). Leave a label blank to skip it. Pills per day is set from the slot amounts.</span>
+      <div class="slots">
+        <label>Dose 1 label<input name="slot1Label" value="AM" autocomplete="off"></label>
+        <label>Pills<input name="slot1Qty" type="number" inputmode="decimal" min="0" step="0.25" value="1"></label>
+        <label>Dose 2 label<input name="slot2Label" placeholder="PM" autocomplete="off"></label>
+        <label>Pills<input name="slot2Qty" type="number" inputmode="decimal" min="0" step="0.25"></label>
+        <label>Dose 3 label<input name="slot3Label" autocomplete="off"></label>
+        <label>Pills<input name="slot3Qty" type="number" inputmode="decimal" min="0" step="0.25"></label>
+      </div>
+    </div>
     <div class="grid2">
       <label>Refills remaining
         <input name="refillsLeft" type="number" inputmode="numeric" min="0" step="1" placeholder="Leave blank to skip">
@@ -463,10 +495,14 @@
         rxWritten: isDate(m.rxWritten) ? m.rxWritten : "",
         rxMonths: m.rxMonths == null ? 12 : Math.max(1, Math.floor(Number(m.rxMonths) || 12)),
         notes: String(m.notes || ""),
+        trackDoses: !!m.trackDoses,
+        slots: Array.isArray(m.slots) ? m.slots.filter(function (s) { return s && String(s.label || "").trim(); }).slice(0, 3).map(function (s) {
+          return { label: String(s.label).trim().slice(0, 12), qty: Math.max(0, Number(s.qty) || 0) };
+        }) : [],
         entries: Array.isArray(m.entries) ? m.entries.filter(function (e) {
-          return e && isDate(e.date) && ["refill", "recount", "adjust"].indexOf(e.type) >= 0;
+          return e && isDate(e.date) && ["refill", "recount", "adjust", "dose"].indexOf(e.type) >= 0;
         }).map(function (e) {
-          return { id: String(e.id || uid()), type: e.type, qty: Number(e.qty) || 0, date: e.date, note: String(e.note || "") };
+          return { id: String(e.id || uid()), type: e.type, qty: Number(e.qty) || 0, date: e.date, note: String(e.note || ""), slot: String(e.slot || "") };
         }) : []
       };
     });
@@ -492,12 +528,15 @@
     if (anchorIdx >= 0) { base = list[anchorIdx].qty; anchorDate = list[anchorIdx].date; }
     else if (list.length) { anchorDate = list[0].date; }
     else { return { count: 0, raw: 0, anchorDate: null }; }
-    var adds = 0;
+    var adds = 0, taken = 0;
     for (var j = anchorIdx + 1; j < list.length; j++) {
       if (list[j].type === "refill" || list[j].type === "adjust") adds += list[j].qty;
+      else if (list[j].type === "dose") taken += list[j].qty;
     }
+    // With dose logging on, only logged doses reduce the count. Otherwise
+    // the daily rate is subtracted for each day since the recount.
     var elapsed = Math.max(0, daysBetween(anchorDate, today));
-    var raw = base + adds - med.perDay * elapsed;
+    var raw = med.trackDoses ? base + adds - taken : base + adds - med.perDay * elapsed;
     return { count: Math.max(0, raw), raw: raw, anchorDate: anchorDate };
   }
 
@@ -594,6 +633,11 @@
 
   function render() {
     var today = todayStr();
+    // Sync open state from the DOM so a re-render never collapses a card mid interaction.
+    listEl.querySelectorAll(".med").forEach(function (c) {
+      var d = c.querySelector("details");
+      if (d) { if (d.open) openIds[c.dataset.id] = true; else delete openIds[c.dataset.id]; }
+    });
     if (!state.meds.length) {
       summaryEl.textContent = "No medications yet.";
       listEl.innerHTML = '<div class="empty"><strong>Nothing tracked yet</strong>Add a medication to start counting pills, projecting when you run out, and planning refills.</div>';
@@ -631,6 +675,19 @@
       extraHtml = '<div class="stat"><span class="label">Extra at earliest pickup</span><span class="value">No schedule yet</span></div>';
     }
 
+    var doseBar = "";
+    if (med.trackDoses && med.slots.length) {
+      var todayDoses = med.entries.filter(function (e) { return e.type === "dose" && e.date === today; });
+      var takenToday = todayDoses.reduce(function (s, e) { return s + e.qty; }, 0);
+      var planned = med.slots.reduce(function (s, x) { return s + x.qty; }, 0);
+      doseBar = '<div class="dosebar"><span class="today">Today ' + fmtNum(takenToday) + " of " + fmtNum(planned) + "</span>" +
+        med.slots.map(function (s) {
+          var done = todayDoses.some(function (e) { return e.slot === s.label; });
+          return '<button type="button" class="' + (done ? "taken" : "") + '" data-action="dose" data-slot="' + esc(s.label) + '" data-qty="' + s.qty + '" aria-pressed="' + done + '">' +
+            esc(s.label) + " " + fmtNum(s.qty) + (done ? " taken" : "") + "</button>";
+        }).join("") + "</div>";
+    }
+
     var rxParts = [];
     if (med.refillsLeft != null) rxParts.push(med.refillsLeft === 0 ? "No refills left" : med.refillsLeft + (med.refillsLeft === 1 ? " refill left" : " refills left"));
     if (a.rxExpires) rxParts.push("Written " + fmtDate(med.rxWritten) + ", " + (a.rxExpired ? "expired " : "expires ") + fmtDate(a.rxExpires));
@@ -652,8 +709,8 @@
     var entries = sortedEntries(med).slice().reverse();
     var entriesHtml = entries.length
       ? '<ul class="entries">' + entries.map(function (e) {
-          var kind = { refill: "Refill", recount: "Recount", adjust: "Adjust" }[e.type];
-          var qty = e.type === "recount" ? "= " + fmtNum(e.qty) : (e.qty >= 0 ? "+" : "") + fmtNum(e.qty);
+          var kind = { refill: "Refill", recount: "Recount", adjust: "Adjust", dose: "Dose" + (e.slot ? " " + esc(e.slot) : "") }[e.type];
+          var qty = e.type === "recount" ? "= " + fmtNum(e.qty) : e.type === "dose" ? "took " + fmtNum(e.qty) : (e.qty >= 0 ? "+" : "") + fmtNum(e.qty);
           return "<li>" +
             '<span class="date">' + fmtDate(e.date) + "</span>" +
             '<span><span class="kind">' + kind + "</span> " + '<span class="qty">' + qty + "</span>" +
@@ -663,8 +720,8 @@
         }).join("") + "</ul>"
       : '<p class="notes">No entries yet.</p>';
 
-    return '<details class="med" data-id="' + med.id + '"' + open + ">" +
-      "<summary>" +
+    return '<div class="med" data-id="' + med.id + '">' +
+      '<div class="head">' +
         '<h2 class="name">' + esc(med.name) + "</h2>" +
         '<div class="chips">' + (a.newRx ? '<span class="chip rx">New Rx needed</span>' : "") +
           (a.reminder ? '<span class="chip review">Check pharmacy</span>' : "") +
@@ -678,7 +735,9 @@
             (fillSub ? '<span class="sub">' + fillSub + "</span>" : "") + "</div>" +
           extraHtml +
         "</div>" +
-      "</summary>" +
+        doseBar +
+      "</div>" +
+      "<details" + open + '><summary><span class="show">Show details</span><span class="hide">Hide details</span></summary>' +
       '<div class="body">' +
         (med.notes ? '<div class="section"><h3>Notes</h3><p class="notes">' + esc(med.notes) + "</p></div>" : "") +
         rxHtml +
@@ -689,6 +748,7 @@
               '<option value="refill">Refill (picked up pills)</option>' +
               '<option value="recount">Recount (set total)</option>' +
               '<option value="adjust">Adjust (plus or minus)</option>' +
+              '<option value="dose">Dose (pills taken)</option>' +
             "</select></label>" +
             '<label>Quantity<input name="qty" type="number" inputmode="decimal" step="0.5" required></label>' +
             '<label>Date<input name="date" type="date" value="' + today + '" required></label>' +
@@ -702,7 +762,7 @@
           '<button type="button" class="small danger" data-action="delete">Delete</button>' +
         "</div>" +
       "</div>" +
-    "</details>";
+    "</details></div>";
   }
 
   // ---------- Dialog helpers ----------
@@ -752,6 +812,12 @@
     medForm.elements.refillsLeft.value = med && med.refillsLeft != null ? med.refillsLeft : "";
     medForm.elements.rxWritten.value = med ? med.rxWritten : "";
     medForm.elements.rxMonths.value = med ? med.rxMonths : 12;
+    medForm.elements.trackDoses.checked = med ? med.trackDoses : false;
+    for (var si = 0; si < 3; si++) {
+      var slot = med && med.slots[si];
+      medForm.elements["slot" + (si + 1) + "Label"].value = slot ? slot.label : (!med && si === 0 ? "AM" : "");
+      medForm.elements["slot" + (si + 1) + "Qty"].value = slot ? slot.qty : (!med && si === 0 ? 1 : "");
+    }
     medForm.elements.notes.value = med ? med.notes : "";
     medDialog.showModal();
     setTimeout(function () { medForm.elements.name.focus(); }, 0);
@@ -766,11 +832,21 @@
     if (!(perDay >= 0)) { f.perDay.focus(); toast("Pills per day must be zero or more."); return; }
     var lastFill = f.lastFill.value;
     if (lastFill && !isDate(lastFill)) { f.lastFill.focus(); toast("Fill date is not valid."); return; }
+    var slots = [];
+    for (var si = 1; si <= 3; si++) {
+      var lbl = f["slot" + si + "Label"].value.trim().slice(0, 12);
+      if (lbl) slots.push({ label: lbl, qty: Math.max(0, Number(f["slot" + si + "Qty"].value) || 0) });
+    }
+    var trackDoses = f.trackDoses.checked;
+    var slotTotal = slots.reduce(function (s, x) { return s + x.qty; }, 0);
+    if (trackDoses && slotTotal > 0) perDay = slotTotal;
     var id = f.id.value;
     var med = id ? findMed(id) : null;
     if (med) {
       med.name = name;
       med.perDay = perDay;
+      med.trackDoses = trackDoses;
+      med.slots = slots;
       med.lastFill = lastFill;
       med.daysSupply = Math.max(0, Math.floor(Number(f.daysSupply.value) || 0));
       med.threshold = Math.max(0, Math.floor(Number(f.threshold.value) || 0));
@@ -784,7 +860,7 @@
     } else {
       var startCount = Math.max(0, Number(f.startCount.value) || 0);
       med = {
-        id: uid(), name: name, perDay: perDay, lastFill: lastFill,
+        id: uid(), name: name, perDay: perDay, lastFill: lastFill, trackDoses: trackDoses, slots: slots,
         daysSupply: Math.max(0, Math.floor(Number(f.daysSupply.value) || 0)),
         threshold: Math.max(0, Math.floor(Number(f.threshold.value) || 0)),
         earlyDays: Math.max(0, Math.floor(Number(f.earlyDays.value) || 0)),
@@ -814,8 +890,9 @@
 
   listEl.addEventListener("toggle", function (ev) {
     var d = ev.target;
-    if (d && d.classList && d.classList.contains("med")) {
-      if (d.open) openIds[d.dataset.id] = true; else delete openIds[d.dataset.id];
+    var card = d && d.tagName === "DETAILS" && d.closest ? d.closest(".med") : null;
+    if (card) {
+      if (d.open) openIds[card.dataset.id] = true; else delete openIds[card.dataset.id];
     }
   }, true);
 
@@ -826,7 +903,20 @@
     var med = findMed(card.dataset.id);
     if (!med) return;
     var action = btn.dataset.action;
-    if (action === "edit") {
+    if (action === "dose") {
+      ev.preventDefault();
+      var today = todayStr();
+      var slot = btn.dataset.slot;
+      var existing = med.entries.filter(function (e) { return e.type === "dose" && e.date === today && e.slot === slot; })[0];
+      if (existing) {
+        med.entries = med.entries.filter(function (e) { return e.id !== existing.id; });
+        toast(slot + " dose removed.");
+      } else {
+        med.entries.push({ id: uid(), type: "dose", qty: Number(btn.dataset.qty) || 0, date: today, note: "", slot: slot });
+        toast(slot + " dose logged.");
+      }
+      save(); render();
+    } else if (action === "edit") {
       openMedDialog(med);
     } else if (action === "delete") {
       confirmBox("Delete " + med.name + "?", "This removes the medication and its whole history. Copy a backup first if you want to keep it.", function () {
@@ -858,11 +948,12 @@
     if (isNaN(qty) || form.elements.qty.value === "") { form.elements.qty.focus(); toast("Enter a quantity."); return; }
     if (!isDate(date)) { form.elements.date.focus(); toast("Enter a valid date."); return; }
     if (type !== "adjust" && qty < 0) { form.elements.qty.focus(); toast("Quantity cannot be negative for this type."); return; }
-    med.entries.push({ id: uid(), type: type, qty: qty, date: date, note: form.elements.note.value.trim() });
+    if (type === "dose" && qty <= 0) { form.elements.qty.focus(); toast("Enter how many pills you took."); return; }
+    med.entries.push({ id: uid(), type: type, qty: qty, date: date, note: form.elements.note.value.trim(), slot: "" });
     if (type === "refill" && med.refillsLeft != null && med.refillsLeft > 0) med.refillsLeft--;
     openIds[med.id] = true;
     save(); render();
-    toast({ refill: "Refill logged.", recount: "Recount saved.", adjust: "Adjustment logged." }[type]);
+    toast({ refill: "Refill logged.", recount: "Recount saved.", adjust: "Adjustment logged.", dose: "Dose logged." }[type]);
   });
 
   // ---------- Backup ----------

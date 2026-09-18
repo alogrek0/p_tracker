@@ -9,6 +9,9 @@ For each medication you record the name, how many pills you take per day, and ho
 - **Refill** adds pills you picked up. The date of the latest refill also anchors the pickup schedule.
 - **Recount** sets the total to what you actually counted on a given date.
 - **Adjust** adds or removes a few pills for missed or extra doses.
+- **Dose** records pills you actually took, in any amount such as 0.5, 1, or 1.5.
+
+Turn on **Log each dose** for a medication to track doses one by one. You define up to three dose slots with a label and amount, for example AM 1 and PM 0.5. The card then shows a button per slot for today. Tap it to log the dose, tap again to undo. Pills per day is set from the slot amounts. With dose logging on, the count only goes down by the doses you log, so recount now and then if you forget to tap. With it off, the count drops by pills per day automatically and Dose entries are a record only.
 
 The current count is derived from the ledger: the latest recount, plus later refills and adjustments, minus your daily dose for each day since the recount. From that the app shows:
 
