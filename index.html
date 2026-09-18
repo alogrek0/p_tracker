@@ -36,10 +36,9 @@
       --warn-soft: #FFF1D6;
       --danger: #A3322A;
       --danger-soft: #FBE3E0;
-      --ok: #0F6E5B;
-      --ok-soft: #DCEFE9;
       --shadow: 0 1px 2px rgba(18, 33, 29, 0.06), 0 4px 14px rgba(18, 33, 29, 0.05);
-      --radius: 14px;
+      --radius: 16px;
+      --on-accent: #FFFFFF;
       color-scheme: light dark;
     }
     @media (prefers-color-scheme: dark) {
@@ -56,9 +55,8 @@
         --warn-soft: #3A2E10;
         --danger: #F19A92;
         --danger-soft: #45201D;
-        --ok: #5CBFA6;
-        --ok-soft: #163A32;
         --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 4px 14px rgba(0, 0, 0, 0.25);
+        --on-accent: #06201A;
       }
     }
 
@@ -74,253 +72,160 @@
       -webkit-font-smoothing: antialiased;
       -webkit-tap-highlight-color: transparent;
     }
-    main {
-      max-width: 640px;
-      margin: 0 auto;
-      padding: 20px 16px 120px;
-    }
+    main { max-width: 560px; margin: 0 auto; padding: 16px 16px 120px; }
 
-    header.top { display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px; }
-    header.top h1 {
-      font-size: 1.6rem;
-      font-weight: 700;
-      letter-spacing: -0.01em;
-      margin: 0;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    header.top h1 svg { width: 30px; height: 30px; flex: none; }
-    .summary { color: var(--muted); font-size: 0.95rem; margin: 0; }
-    .toolbar { display: flex; flex-wrap: wrap; gap: 8px; }
+    /* Header */
+    .top { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; min-height: 44px; }
+    .top h1 { font-size: 1.35rem; font-weight: 700; letter-spacing: -0.01em; margin: 0; display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+    .top h1 svg { width: 28px; height: 28px; flex: none; }
+    .top h1 span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-    button, .btn {
+    /* Buttons */
+    button {
       font: inherit;
       font-weight: 600;
       font-size: 0.95rem;
-      border: 1px solid transparent;
-      border-radius: 10px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
       padding: 10px 14px;
       min-height: 44px;
       cursor: pointer;
       color: var(--text);
       background: var(--card);
-      border-color: var(--line);
       box-shadow: var(--shadow);
       transition: transform 0.05s ease, background 0.15s ease;
     }
     button:active { transform: translateY(1px); }
     button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
-    button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+    button.primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
     button.primary:hover { background: var(--accent-strong); }
     button.danger { color: var(--danger); }
+    button.icon { width: 44px; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
+    button.icon svg { width: 22px; height: 22px; }
     button.small { min-height: 36px; padding: 6px 10px; font-size: 0.85rem; box-shadow: none; }
     button.link { background: transparent; border-color: transparent; box-shadow: none; color: var(--accent); padding: 6px 8px; min-height: 36px; }
-    @media (prefers-color-scheme: dark) { button.primary { color: #06201A; } }
 
-    .empty {
-      background: var(--card);
-      border: 1px dashed var(--line);
-      border-radius: var(--radius);
-      padding: 28px 20px;
-      text-align: center;
-      color: var(--muted);
-    }
+    /* Empty state */
+    .empty { background: var(--card); border: 1px dashed var(--line); border-radius: var(--radius); padding: 28px 20px; text-align: center; color: var(--muted); }
     .empty strong { color: var(--text); display: block; margin-bottom: 6px; font-size: 1.05rem; }
 
-    .med {
-      background: var(--card);
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      margin-bottom: 12px;
-      overflow: hidden;
-    }
-    .med .head {
+    /* Home cards */
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 12px; overflow: hidden; }
+    .card .open {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-align: left;
+      border: 0;
+      border-radius: 0;
+      box-shadow: none;
+      background: transparent;
       padding: 14px 16px;
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 6px 12px;
+      min-height: 64px;
     }
-    .med summary {
-      list-style: none;
-      cursor: pointer;
-      padding: 10px 16px;
-      border-top: 1px solid var(--line);
-      font-size: 0.85rem;
-      font-weight: 600;
-      color: var(--accent);
-    }
-    .med summary::-webkit-details-marker { display: none; }
-    .med details[open] > summary .show { display: none; }
-    .med details:not([open]) > summary .hide { display: none; }
-    .med summary:focus-visible { outline: 3px solid var(--accent); outline-offset: -3px; }
-    .med .name { font-weight: 700; font-size: 1.1rem; margin: 0; grid-column: 1; }
-    .chips { grid-column: 2; grid-row: 1; align-self: start; display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
-    .chip.rx { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; padding: 3px 8px; border-radius: 999px; background: var(--danger-soft); color: var(--danger); border: 1px solid var(--danger); white-space: nowrap; }
-    .fills span.blocked { background: var(--danger-soft); color: var(--danger); }
-    .notes.warn { color: var(--danger); }
-    .chip.review { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; padding: 3px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-strong); border: 1px solid var(--accent); white-space: nowrap; }
-    .status {
-      font-size: 0.75rem;
-      font-weight: 700;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      padding: 4px 9px;
-      border-radius: 999px;
-      background: var(--ok-soft);
-      color: var(--ok);
-      white-space: nowrap;
-    }
-    .status.low { background: var(--warn-soft); color: var(--warn); }
-    .status.shortfall, .status.out { background: var(--danger-soft); color: var(--danger); }
-    .dosebar { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 6px; }
-    .dosebar .today { font-size: 0.8rem; color: var(--muted); margin-right: 4px; }
-    .dosebar button { min-height: 38px; padding: 6px 12px; font-size: 0.9rem; box-shadow: none; border-radius: 999px; }
-    .dosebar button.taken { background: var(--accent); color: #fff; border-color: var(--accent); }
-    .dosebar button.qty { min-width: 48px; font-variant-numeric: tabular-nums; }
-    .dosebar button.qty:first-of-type { margin-left: 0; }
-    .dosebar .sep { width: 1px; height: 24px; background: var(--line); }
-    @media (prefers-color-scheme: dark) { .dosebar button.taken { color: #06201A; } }
-    .switch { flex-direction: row; align-items: center; gap: 10px; }
-    .switch input { width: 22px; height: 22px; min-height: 0; margin: 0; }
-    .slots { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .stats {
-      grid-column: 1 / -1;
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-      gap: 8px 14px;
-      margin-top: 4px;
-    }
+    .card .open .txt { flex: 1; min-width: 0; }
+    .card .open .name { display: block; font-weight: 700; font-size: 1.1rem; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .card .open .sub { display: block; color: var(--muted); font-size: 0.9rem; font-weight: 500; }
+    .card .open svg { width: 20px; height: 20px; color: var(--muted); flex: none; }
+    .doses { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 16px 12px; align-items: center; }
+    .doses button { min-height: 48px; padding: 8px 18px; border-radius: 999px; font-size: 1rem; flex: 1 1 auto; box-shadow: none; }
+    .doses button.taken { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+    .doses button.other, .doses button.qty { flex: 0 0 auto; }
+    .doses button.other { font-size: 0.9rem; color: var(--accent); background: transparent; border-color: transparent; padding: 8px 10px; }
+    .doses button.qty { min-width: 56px; font-variant-numeric: tabular-nums; }
+    .status { padding: 10px 16px 14px; font-size: 0.9rem; font-weight: 500; color: var(--muted); border-top: 1px solid var(--line); }
+    .status.info { color: var(--accent); }
+    .status.warn { color: var(--warn); }
+    .status.danger { color: var(--danger); }
+    .status.ok { color: var(--muted); }
+
+    /* Detail screen */
+    .detail h2 { font-size: 1.35rem; margin: 0; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .panel { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 14px 16px; margin-bottom: 12px; }
+    .panel h3 { margin: 0 0 10px; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+    .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; }
     .stat { display: flex; flex-direction: column; }
     .stat .label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
     .stat .value { font-weight: 600; font-size: 1rem; }
     .stat .value.neg { color: var(--danger); }
-    .stat .value.pos { color: var(--ok); }
+    .stat .value.pos { color: var(--accent); }
     .stat .sub { font-size: 0.8rem; color: var(--muted); }
-
-    .body { border-top: 1px solid var(--line); padding: 14px 16px 16px; display: grid; gap: 16px; }
-    .section h3 { margin: 0 0 8px; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
-    .notes { margin: 0; color: var(--muted); white-space: pre-wrap; }
-    .notes.anchor { font-size: 0.8rem; margin-top: 8px; }
-
+    .big { font-size: 1.2rem; font-weight: 700; margin: 0 0 8px; }
     .fills { display: flex; flex-wrap: wrap; gap: 6px; }
     .fills span { background: var(--accent-soft); color: var(--accent-strong); font-weight: 600; font-size: 0.85rem; padding: 5px 10px; border-radius: 999px; }
-    .fills span.due { outline: 2px solid var(--accent); }
-
+    .fills span.blocked { background: var(--danger-soft); color: var(--danger); }
+    .notes { margin: 0; color: var(--muted); white-space: pre-wrap; }
+    .notes.small { font-size: 0.8rem; margin-top: 8px; }
+    .notes.warn { color: var(--danger); }
     .entries { list-style: none; margin: 0; padding: 0; }
-    .entries li {
-      display: grid;
-      grid-template-columns: 92px 1fr auto;
-      gap: 8px;
-      align-items: center;
-      padding: 8px 0;
-      border-bottom: 1px solid var(--line);
-      font-size: 0.92rem;
-    }
+    .entries li { display: grid; grid-template-columns: 92px 1fr auto; gap: 8px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 0.92rem; }
     .entries li:last-child { border-bottom: 0; }
     .entries .date { color: var(--muted); font-variant-numeric: tabular-nums; }
     .entries .kind { font-weight: 600; }
     .entries .note { color: var(--muted); font-size: 0.85rem; }
-    .entries .qty { font-variant-numeric: tabular-nums; }
 
-    form.entry {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-    }
+    /* Forms */
+    form.entry { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     form.entry .full { grid-column: 1 / -1; }
     label { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; font-weight: 600; color: var(--muted); }
+    label .hint { font-weight: 400; font-size: 0.78rem; line-height: 1.35; }
     input, select, textarea {
-      font: inherit;
-      color: var(--text);
-      background: var(--bg);
-      border: 1px solid var(--line);
-      border-radius: 10px;
-      padding: 10px 12px;
-      min-height: 44px;
-      width: 100%;
+      font: inherit; color: var(--text); background: var(--bg);
+      border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; min-height: 44px; width: 100%;
     }
     textarea { min-height: 80px; resize: vertical; }
-    label .hint { font-weight: 400; font-size: 0.78rem; line-height: 1.35; }
     input:focus, select:focus, textarea:focus { outline: 3px solid var(--accent); outline-offset: 0; border-color: var(--accent); }
+    .switch { flex-direction: row; align-items: center; gap: 10px; color: var(--text); }
+    .switch input { width: 22px; height: 22px; min-height: 0; margin: 0; flex: none; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .slots { display: grid; grid-template-columns: 2fr 1fr; gap: 8px; }
     .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
     .row.end { justify-content: flex-end; }
     .row.split { justify-content: space-between; }
+    details.more { border-top: 1px solid var(--line); padding-top: 8px; }
+    details.more summary { cursor: pointer; font-weight: 600; color: var(--accent); padding: 8px 0; list-style: none; }
+    details.more summary::-webkit-details-marker { display: none; }
+    details.more summary::before { content: "+ "; }
+    details.more[open] summary::before { content: "\2212  "; }
+    details.more .inner { display: grid; gap: 12px; padding-top: 6px; }
+    .hidden { display: none !important; }
 
+    /* Dialogs */
     dialog {
-      border: 1px solid var(--line);
-      border-radius: 18px;
-      background: var(--card);
-      color: var(--text);
-      padding: 0;
-      width: min(560px, calc(100vw - 32px));
-      box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+      border: 1px solid var(--line); border-radius: 18px; background: var(--card); color: var(--text); padding: 0;
+      width: min(560px, calc(100vw - 32px)); box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+      max-height: calc(100vh - 32px);
     }
     dialog::backdrop { background: rgba(6, 20, 16, 0.5); }
     dialog form.box, dialog .box { padding: 20px; display: grid; gap: 12px; }
     dialog h2 { margin: 0 0 4px; font-size: 1.2rem; }
     dialog p.help { margin: 0; color: var(--muted); }
-    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    @media (max-width: 420px) { .grid2 { grid-template-columns: 1fr; } }
+    .menu { display: grid; gap: 8px; }
+    .menu button { text-align: left; box-shadow: none; }
+    .version { font-size: 0.8rem; color: var(--muted); text-align: center; }
 
     #update-bar {
-      position: fixed;
-      left: 50%;
-      bottom: calc(16px + env(safe-area-inset-bottom));
-      transform: translateX(-50%);
-      width: min(560px, calc(100vw - 32px));
-      background: var(--accent);
-      color: #fff;
-      border-radius: 14px;
-      padding: 12px 14px;
-      display: none;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-      z-index: 20;
+      position: fixed; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom)); transform: translateX(-50%);
+      width: min(560px, calc(100vw - 32px)); background: var(--accent); color: var(--on-accent);
+      border-radius: 14px; padding: 12px 14px; display: none; align-items: center; justify-content: space-between; gap: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3); z-index: 20;
     }
     #update-bar.show { display: flex; }
-    #update-bar button { background: #fff; color: var(--accent-strong); border-color: #fff; box-shadow: none; }
-    @media (prefers-color-scheme: dark) { #update-bar { color: #06201A; } #update-bar button { background: #06201A; color: #fff; border-color: #06201A; } }
+    #update-bar button { background: var(--on-accent); color: var(--accent); border-color: var(--on-accent); box-shadow: none; }
 
     #toast {
-      position: fixed;
-      left: 50%;
-      bottom: calc(16px + env(safe-area-inset-bottom));
-      transform: translateX(-50%) translateY(20px);
-      background: var(--text);
-      color: var(--bg);
-      padding: 10px 16px;
-      border-radius: 999px;
-      font-size: 0.9rem;
-      font-weight: 600;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.2s ease, transform 0.2s ease;
-      z-index: 30;
-      max-width: calc(100vw - 32px);
+      position: fixed; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom)); transform: translateX(-50%) translateY(20px);
+      background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 999px; font-size: 0.9rem; font-weight: 600;
+      opacity: 0; pointer-events: none; transition: opacity 0.2s ease, transform 0.2s ease; z-index: 30; max-width: calc(100vw - 32px);
     }
     #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
   </style>
 </head>
 <body>
 <main>
-  <header class="top">
-    <h1>
-      <svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="16" fill="#0F6E5B"/><g transform="rotate(-40 32 32)"><rect x="12" y="23" width="40" height="18" rx="9" fill="#BFE6DA"/><path d="M32 23h11a9 9 0 0 1 0 18H32z" fill="#ffffff"/><rect x="18" y="27" width="10" height="3" rx="1.5" fill="#ffffff" opacity="0.7"/></g></svg>
-      Pill ledger
-    </h1>
-    <p class="summary" id="summary">Loading</p>
-    <div class="toolbar">
-      <button class="primary" id="add-btn" type="button">Add medication</button>
-      <button id="copy-btn" type="button">Copy backup</button>
-      <button id="paste-btn" type="button">Paste backup</button>
-    </div>
-  </header>
-
-  <section id="list" aria-live="polite"></section>
+  <header class="top" id="top"></header>
+  <section id="screen" aria-live="polite"></section>
 </main>
 
 <div id="update-bar" role="status">
@@ -329,6 +234,18 @@
 </div>
 <div id="toast" role="status" aria-live="polite"></div>
 
+<dialog id="menu-dialog">
+  <div class="box">
+    <h2>Menu</h2>
+    <div class="menu">
+      <button type="button" id="copy-btn">Copy backup</button>
+      <button type="button" id="paste-btn">Paste backup</button>
+      <button type="button" data-close>Close</button>
+    </div>
+    <p class="version">Pill ledger. Data stays on this device.</p>
+  </div>
+</dialog>
+
 <dialog id="med-dialog">
   <form class="box" method="dialog" id="med-form" novalidate>
     <h2 id="med-dialog-title">Add medication</h2>
@@ -336,70 +253,68 @@
     <label>Name
       <input name="name" required autocomplete="off" placeholder="Metformin 500 mg">
     </label>
+    <label class="switch">
+      <input name="trackDoses" type="checkbox">
+      <span>Log each dose with AM and PM buttons</span>
+    </label>
+    <div id="slots-block" class="hidden">
+      <span class="hint">Dose buttons. Leave a label blank to skip it.</span>
+      <div class="slots">
+        <label>Dose 1<input name="slot1Label" placeholder="AM" autocomplete="off"></label>
+        <label>Pills<input name="slot1Qty" type="number" inputmode="decimal" min="0" step="0.25"></label>
+        <label>Dose 2<input name="slot2Label" placeholder="PM" autocomplete="off"></label>
+        <label>Pills<input name="slot2Qty" type="number" inputmode="decimal" min="0" step="0.25"></label>
+        <label>Dose 3<input name="slot3Label" autocomplete="off"></label>
+        <label>Pills<input name="slot3Qty" type="number" inputmode="decimal" min="0" step="0.25"></label>
+      </div>
+    </div>
     <div class="grid2">
-      <label>Pills per day
-        <input name="perDay" type="number" inputmode="decimal" min="0" step="0.25" required value="1">
+      <label id="per-day-label">Pills per day
+        <input name="perDay" type="number" inputmode="decimal" min="0" step="0.25" value="1">
       </label>
       <label id="start-count-label">Pills on hand today
         <input name="startCount" type="number" inputmode="decimal" min="0" step="0.5" value="0">
-      </label>
-    </div>
-    <div class="grid2">
-      <label>Last pickup date
-        <input name="lastFill" type="date">
-        <span class="hint">Used until you log a refill. After that the latest refill entry sets the schedule.</span>
       </label>
       <label>Days supply per fill
         <input name="daysSupply" type="number" inputmode="numeric" min="1" step="1" value="30">
       </label>
     </div>
-    <label class="switch">
-      <input name="trackDoses" type="checkbox">
-      <span>Log each dose. The count only goes down when you tap a dose, so recount now and then.</span>
-    </label>
-    <div id="slots-block">
-      <span class="hint">Dose slots (label and pills). Leave a label blank to skip it. Pills per day is set from the slot amounts.</span>
-      <div class="slots">
-        <label>Dose 1 label<input name="slot1Label" value="AM" autocomplete="off"></label>
-        <label>Pills<input name="slot1Qty" type="number" inputmode="decimal" min="0" step="0.25" value="1"></label>
-        <label>Dose 2 label<input name="slot2Label" placeholder="PM" autocomplete="off"></label>
-        <label>Pills<input name="slot2Qty" type="number" inputmode="decimal" min="0" step="0.25"></label>
-        <label>Dose 3 label<input name="slot3Label" autocomplete="off"></label>
-        <label>Pills<input name="slot3Qty" type="number" inputmode="decimal" min="0" step="0.25"></label>
+    <details class="more" id="more-settings">
+      <summary>More settings</summary>
+      <div class="inner">
+        <div class="grid2">
+          <label>Last pickup date
+            <input name="lastFill" type="date">
+            <span class="hint">Used until you log a refill.</span>
+          </label>
+          <label>Early pickup (days before due)
+            <input name="earlyDays" type="number" inputmode="numeric" min="0" step="1" value="2">
+          </label>
+          <label>Reminder (days before due)
+            <input name="reminderDays" type="number" inputmode="numeric" min="0" step="1" value="4">
+          </label>
+          <label>Low supply warning (days left)
+            <input name="threshold" type="number" inputmode="numeric" min="0" step="1" value="7">
+          </label>
+          <label>Refills remaining
+            <input name="refillsLeft" type="number" inputmode="numeric" min="0" step="1" placeholder="Blank to skip">
+          </label>
+          <label>Prescription written
+            <input name="rxWritten" type="date">
+          </label>
+          <label>Prescription valid (months)
+            <input name="rxMonths" type="number" inputmode="numeric" min="1" step="1" value="12">
+            <span class="hint">6 for Schedule III and IV.</span>
+          </label>
+        </div>
+        <label>Notes
+          <textarea name="notes" placeholder="Dose instructions, pharmacy, prescriber"></textarea>
+        </label>
       </div>
-    </div>
-    <div class="grid2">
-      <label>Refills remaining
-        <input name="refillsLeft" type="number" inputmode="numeric" min="0" step="1" placeholder="Leave blank to skip">
-        <span class="hint">Goes down by one each time you log a refill.</span>
-      </label>
-      <label>Prescription written date
-        <input name="rxWritten" type="date">
-      </label>
-    </div>
-    <label>Prescription valid for (months)
-      <input name="rxMonths" type="number" inputmode="numeric" min="1" step="1" value="12">
-      <span class="hint">Usually 12. Schedule III and IV prescriptions expire after 6 months and allow at most 5 refills.</span>
-    </label>
-    <div class="grid2">
-      <label>Early pickup (days before due)
-        <input name="earlyDays" type="number" inputmode="numeric" min="0" step="1" value="2">
-        <span class="hint">How early the pharmacy lets you collect. Use 0 or 1 for controlled medications.</span>
-      </label>
-      <label>Reminder (days before due)
-        <input name="reminderDays" type="number" inputmode="numeric" min="0" step="1" value="4">
-        <span class="hint">Shows a Check pharmacy chip so you can review the pharmacy app.</span>
-      </label>
-    </div>
-    <label>Low supply warning (days left)
-      <input name="threshold" type="number" inputmode="numeric" min="0" step="1" value="7">
-    </label>
-    <label>Notes
-      <textarea name="notes" placeholder="Dose instructions, pharmacy, prescriber"></textarea>
-    </label>
+    </details>
     <div class="row end">
       <button type="button" data-close>Cancel</button>
-      <button type="submit" class="primary" id="med-save">Save</button>
+      <button type="submit" class="primary">Save</button>
     </div>
   </form>
 </dialog>
@@ -433,6 +348,7 @@
 
   var STORAGE_KEY = "pill-ledger-v1";
   var FILL_COUNT = 4;
+  var QUICK_AMOUNTS = [0.5, 1, 1.5];
 
   // ---------- Date helpers (YYYY-MM-DD strings, arithmetic in UTC) ----------
   function pad(n) { return (n < 10 ? "0" : "") + n; }
@@ -447,14 +363,26 @@
   function isDate(s) { return typeof s === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s) && !isNaN(toUTC(s)); }
   function daysBetween(a, b) { return Math.round((toUTC(b) - toUTC(a)) / 86400000); }
   function addDays(s, n) { return new Date(toUTC(s) + n * 86400000).toISOString().slice(0, 10); }
+  function addMonths(s, n) {
+    var p = s.split("-").map(Number);
+    var y = p[0], m = p[1] - 1 + n, d = p[2];
+    var last = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+    return new Date(Date.UTC(y, m, Math.min(d, last))).toISOString().slice(0, 10);
+  }
   function fmtDate(s) {
     if (!isDate(s)) return "";
-    var d = new Date(toUTC(s));
-    return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+    return new Date(toUTC(s)).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+  }
+  function fmtShort(s) {
+    return new Date(toUTC(s)).toLocaleDateString(undefined, { month: "short", day: "numeric", timeZone: "UTC" });
   }
   function fmtNum(n) {
     if (!isFinite(n)) return "";
     return String(Math.round(n * 100) / 100);
+  }
+  function pillWord(n) {
+    if (n === 0.5) return "half a pill";
+    return fmtNum(n) + (n === 1 ? " pill" : " pills");
   }
   function esc(s) {
     return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
@@ -465,7 +393,8 @@
 
   // ---------- State ----------
   var state = load();
-  var openIds = {};
+  var view = { screen: "home", id: null };
+  var otherOpen = {};
 
   function emptyState() { return { version: 1, meds: [] }; }
   function load() {
@@ -511,6 +440,10 @@
     });
     return { version: 1, meds: meds };
   }
+  function findMed(id) {
+    for (var i = 0; i < state.meds.length; i++) if (state.meds[i].id === id) return state.meds[i];
+    return null;
+  }
 
   // ---------- Pure calculations ----------
   function sortedEntries(med) {
@@ -520,7 +453,8 @@
   }
 
   // Current count: latest recount on or before today, plus later refills and
-  // adjustments on or before today, minus pills per day for each day since the recount.
+  // adjustments on or before today, minus either logged doses (when dose
+  // logging is on) or pills per day for each day since the recount.
   function computeCount(med, today) {
     var list = sortedEntries(med).filter(function (e) { return e.date <= today; });
     var anchorIdx = -1;
@@ -536,8 +470,6 @@
       if (list[j].type === "refill" || list[j].type === "adjust") adds += list[j].qty;
       else if (list[j].type === "dose") taken += list[j].qty;
     }
-    // With dose logging on, only logged doses reduce the count. Otherwise
-    // the daily rate is subtracted for each day since the recount.
     var elapsed = Math.max(0, daysBetween(anchorDate, today));
     var raw = med.trackDoses ? base + adds - taken : base + adds - med.perDay * elapsed;
     return { count: Math.max(0, raw), raw: raw, anchorDate: anchorDate };
@@ -547,14 +479,13 @@
     if (perDay <= 0) return Infinity;
     return Math.floor(count / perDay + 1e-9);
   }
-
   function runOutDate(today, days) {
     if (!isFinite(days)) return null;
     return addDays(today, days);
   }
 
-  // Pickup anchor for the refill schedule: the latest refill entry on or before
-  // today wins; the manual last pickup date is only a fallback before the first refill.
+  // Pickup anchor: the latest refill entry on or before today wins; the manual
+  // last pickup date is only a fallback before the first refill.
   function lastPickupDate(med, today) {
     var list = sortedEntries(med);
     for (var i = list.length - 1; i >= 0; i--) {
@@ -563,11 +494,9 @@
     if (isDate(med.lastFill)) return { date: med.lastFill, source: "manual" };
     return null;
   }
-
   function nextFillDates(med, today, n) {
     var anchor = lastPickupDate(med, today);
     if (!anchor || med.daysSupply <= 0) return [];
-    // The anchor is a pickup that already happened, so the next one is a full supply later.
     var d = addDays(anchor.date, med.daysSupply);
     var guard = 0;
     while (d < today && guard < 5000) { d = addDays(d, med.daysSupply); guard++; }
@@ -575,7 +504,14 @@
     for (var i = 0; i < n; i++) { out.push(d); d = addDays(d, med.daysSupply); }
     return out;
   }
-
+  function earliestPickup(med, due, today) {
+    var e = addDays(due, -med.earlyDays);
+    return e < today ? today : e;
+  }
+  function windowText(med, due, today) {
+    var e = earliestPickup(med, due, today);
+    return e < due ? fmtShort(e) + " to " + fmtDate(due) : fmtDate(due);
+  }
   function extraSupply(count, perDay, today, nextFill) {
     if (!nextFill) return null;
     var needed = perDay * daysBetween(today, nextFill);
@@ -588,14 +524,11 @@
     var days = daysRemaining(c.count, med.perDay);
     var fills = nextFillDates(med, today, FILL_COUNT);
     var nextFill = fills.length ? fills[0] : null;
-    // Earliest allowed pickup for the next due date, never before today.
     var nextEarliest = nextFill ? earliestPickup(med, nextFill, today) : null;
     var extra = extraSupply(c.count, med.perDay, today, nextEarliest);
     var reminder = !!nextFill && daysBetween(today, nextFill) <= med.reminderDays;
     var rxExpires = isDate(med.rxWritten) ? addMonths(med.rxWritten, med.rxMonths) : null;
     var rxExpired = !!rxExpires && rxExpires < today;
-    // A scheduled pickup needs a new prescription when refills run out before it
-    // or when it falls after the prescription expires.
     var fillNeedsRx = fills.map(function (d, i) {
       return (med.refillsLeft != null && i >= med.refillsLeft) || (!!rxExpires && d > rxExpires);
     });
@@ -607,175 +540,180 @@
     return { count: c.count, anchorDate: c.anchorDate, days: days, runOut: runOutDate(today, days), fills: fills, nextFill: nextFill, nextEarliest: nextEarliest, extra: extra, reminder: reminder, status: status, pickup: lastPickupDate(med, today), rxExpires: rxExpires, rxExpired: rxExpired, fillNeedsRx: fillNeedsRx, newRx: newRx };
   }
 
-  function addMonths(s, n) {
-    var p = s.split("-").map(Number);
-    var y = p[0], m = p[1] - 1 + n, d = p[2];
-    var last = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
-    return new Date(Date.UTC(y, m, Math.min(d, last))).toISOString().slice(0, 10);
-  }
-
-  function earliestPickup(med, due, today) {
-    var e = addDays(due, -med.earlyDays);
-    return e < today ? today : e;
-  }
-  function fmtShort(s) {
-    return new Date(toUTC(s)).toLocaleDateString(undefined, { month: "short", day: "numeric", timeZone: "UTC" });
-  }
-  function windowText(med, due, today) {
-    var e = earliestPickup(med, due, today);
-    return e < due ? fmtShort(e) + " to " + fmtDate(due) : fmtDate(due);
+  // One sentence per medication, most urgent first.
+  function statusLine(med, a, today) {
+    if (a.status === "out") return { text: "Out of pills. Recount or log a refill.", level: "danger" };
+    if (a.newRx) {
+      var why = a.rxExpired ? ", the current one expired " + fmtShort(a.rxExpires)
+        : med.refillsLeft === 0 ? ", no refills left"
+        : ", before the " + fmtShort(a.nextFill) + " pickup";
+      return { text: "New prescription needed" + why + ".", level: "danger" };
+    }
+    if (a.status === "shortfall") return { text: "Short by " + fmtNum(-a.extra.pills) + " pills before the " + fmtShort(a.nextEarliest) + " pickup.", level: "danger" };
+    if (a.status === "low") return { text: "Running low, " + a.days + (a.days === 1 ? " day" : " days") + " left.", level: "warn" };
+    if (a.reminder) return { text: "Check the pharmacy app, pickup due " + fmtShort(a.nextFill) + ".", level: "info" };
+    if (a.nextFill) return { text: "Next pickup " + windowText(med, a.nextFill, today) + ".", level: "ok" };
+    return { text: "No pickup schedule set.", level: "ok" };
   }
 
   // ---------- Rendering ----------
-  var listEl = document.getElementById("list");
-  var summaryEl = document.getElementById("summary");
-
-  function statusLabel(s) {
-    return { ok: "OK", low: "Low", shortfall: "Shortfall", out: "Out" }[s] || s;
-  }
+  var topEl = document.getElementById("top");
+  var screenEl = document.getElementById("screen");
+  var LOGO = '<svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="16" fill="#0F6E5B"/><g transform="rotate(-40 32 32)"><rect x="12" y="23" width="40" height="18" rx="9" fill="#BFE6DA"/><path d="M32 23h11a9 9 0 0 1 0 18H32z" fill="#ffffff"/><rect x="18" y="27" width="10" height="3" rx="1.5" fill="#ffffff" opacity="0.7"/></g></svg>';
+  var CHEVRON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
+  var BACK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>';
+  var DOTS = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>';
 
   function render() {
-    var today = todayStr();
-    // Sync open state from the DOM so a re-render never collapses a card mid interaction.
-    listEl.querySelectorAll(".med").forEach(function (c) {
-      var d = c.querySelector("details");
-      if (d) { if (d.open) openIds[c.dataset.id] = true; else delete openIds[c.dataset.id]; }
-    });
-    if (!state.meds.length) {
-      summaryEl.textContent = "No medications yet.";
-      listEl.innerHTML = '<div class="empty"><strong>Nothing tracked yet</strong>Add a medication to start counting pills, projecting when you run out, and planning refills.</div>';
-      return;
-    }
-    var attention = 0, review = 0, needRx = 0;
-    var html = state.meds.map(function (med) {
-      var a = analyze(med, today);
-      if (a.status !== "ok") attention++;
-      if (a.reminder) review++;
-      if (a.newRx) needRx++;
-      return renderMed(med, a, today);
-    }).join("");
-    listEl.innerHTML = html;
-    summaryEl.textContent = state.meds.length + (state.meds.length === 1 ? " medication" : " medications") +
-      (attention ? ", " + attention + " need" + (attention === 1 ? "s" : "") + " attention" : ", all fine") +
-      (review ? ", " + review + " to check at the pharmacy" : "") +
-      (needRx ? ", " + needRx + (needRx === 1 ? " needs" : " need") + " a new prescription" : "");
+    var med = view.screen === "detail" ? findMed(view.id) : null;
+    if (view.screen === "detail" && !med) { view = { screen: "home", id: null }; }
+    if (view.screen === "detail") renderDetail(med); else renderHome();
+    window.scrollTo(0, 0);
   }
 
-  function renderMed(med, a, today) {
-    var open = openIds[med.id] ? " open" : "";
+  function renderHome() {
+    var today = todayStr();
+    topEl.innerHTML = "<h1>" + LOGO + "<span>Pill ledger</span></h1>" +
+      '<button type="button" class="primary" data-action="add">Add</button>' +
+      '<button type="button" class="icon" data-action="menu" aria-label="Menu">' + DOTS + "</button>";
+    if (!state.meds.length) {
+      screenEl.innerHTML = '<div class="empty"><strong>Nothing tracked yet</strong>Add a medication to log doses, count pills, and plan pickups.</div>';
+      return;
+    }
+    screenEl.innerHTML = state.meds.map(function (med) { return renderCard(med, analyze(med, today), today); }).join("");
+  }
+
+  function renderCard(med, a, today) {
+    var sub = fmtNum(a.count) + " pills" + (isFinite(a.days) ? ", " + a.days + (a.days === 1 ? " day" : " days") + " left" : "");
+    var st = statusLine(med, a, today);
+    var doses = "";
+    if (med.trackDoses) {
+      var todayDoses = med.entries.filter(function (e) { return e.type === "dose" && e.date === today; });
+      var slots = med.slots.map(function (s) {
+        var done = todayDoses.some(function (e) { return e.slot === s.label; });
+        return '<button type="button" class="' + (done ? "taken" : "") + '" data-action="dose" data-slot="' + esc(s.label) + '" data-qty="' + s.qty + '" aria-pressed="' + done + '">' +
+          esc(s.label) + " " + fmtNum(s.qty) + (done ? " taken" : "") + "</button>";
+      }).join("");
+      var showQuick = !med.slots.length || otherOpen[med.id];
+      var quick = showQuick ? QUICK_AMOUNTS.map(function (q) {
+        return '<button type="button" class="qty" data-action="dose-qty" data-qty="' + q + '" aria-label="Log ' + pillWord(q) + '">' + (q === 0.5 ? "1/2" : fmtNum(q)) + "</button>";
+      }).join("") : "";
+      var other = med.slots.length ? '<button type="button" class="other" data-action="other" aria-expanded="' + !!otherOpen[med.id] + '">' + (otherOpen[med.id] ? "Hide" : "Other") + "</button>" : "";
+      doses = '<div class="doses">' + slots + other + quick + "</div>";
+    }
+    return '<article class="card" data-id="' + med.id + '">' +
+      '<button type="button" class="open" data-action="open" aria-label="Open ' + esc(med.name) + '">' +
+        '<span class="txt"><span class="name">' + esc(med.name) + '</span><span class="sub">' + sub + "</span></span>" + CHEVRON +
+      "</button>" +
+      doses +
+      '<div class="status ' + st.level + '">' + st.text + "</div>" +
+    "</article>";
+  }
+
+  function renderDetail(med) {
+    var today = todayStr();
+    var a = analyze(med, today);
+    topEl.innerHTML = '<button type="button" class="icon" data-action="back" aria-label="Back">' + BACK + "</button>" +
+      '<h2 class="detail">' + esc(med.name) + "</h2>" +
+      '<button type="button" data-action="edit">Edit</button>';
+
     var daysText = isFinite(a.days) ? a.days + (a.days === 1 ? " day" : " days") : "No daily dose";
-    var runOutText = a.runOut ? fmtDate(a.runOut) : "n/a";
-    var fillText = a.nextFill ? windowText(med, a.nextFill, today) : "Not set";
-    var fillSub = med.daysSupply ? "Every " + med.daysSupply + " days" + (med.earlyDays ? ", up to " + med.earlyDays + (med.earlyDays === 1 ? " day" : " days") + " early" : "") : "";
-    if (a.reminder) fillSub = "Due " + fmtShort(a.nextFill) + ". Check the pharmacy app.";
     var extraHtml;
     if (a.extra) {
       var cls = a.extra.pills < 0 ? "neg" : a.extra.pills > 0 ? "pos" : "";
       var sign = a.extra.pills > 0 ? "+" : "";
       var daysPart = a.extra.days == null ? "" : ' <span class="sub">(' + sign + fmtNum(a.extra.days) + " days)</span>";
-      extraHtml = '<div class="stat"><span class="label">Extra at earliest pickup</span><span class="value ' + cls + '">' + sign + fmtNum(a.extra.pills) + " pills" + daysPart + "</span></div>";
+      extraHtml = '<span class="value ' + cls + '">' + sign + fmtNum(a.extra.pills) + " pills" + daysPart + "</span>";
     } else {
-      extraHtml = '<div class="stat"><span class="label">Extra at earliest pickup</span><span class="value">No schedule yet</span></div>';
+      extraHtml = '<span class="value">No schedule yet</span>';
     }
+    var supply = '<div class="panel"><h3>Supply</h3><div class="stats">' +
+      '<div class="stat"><span class="label">On hand</span><span class="value">' + fmtNum(a.count) + ' pills</span><span class="sub">' + fmtNum(med.perDay) + " per day" + (med.trackDoses ? ", dose logging on" : "") + "</span></div>" +
+      '<div class="stat"><span class="label">Days left</span><span class="value">' + daysText + '</span><span class="sub">Runs out ' + (a.runOut ? fmtDate(a.runOut) : "n/a") + "</span></div>" +
+      '<div class="stat"><span class="label">Extra at earliest pickup</span>' + extraHtml + "</div>" +
+      "</div></div>";
 
-    var doseBar = "";
-    if (med.trackDoses) {
-      var todayDoses = med.entries.filter(function (e) { return e.type === "dose" && e.date === today; });
-      var takenToday = todayDoses.reduce(function (s, e) { return s + e.qty; }, 0);
-      var planned = med.slots.reduce(function (s, x) { return s + x.qty; }, 0);
-      doseBar = '<div class="dosebar"><span class="today">Today ' + fmtNum(takenToday) + (planned ? " of " + fmtNum(planned) : "") + "</span>" +
-        med.slots.map(function (s) {
-          var done = todayDoses.some(function (e) { return e.slot === s.label; });
-          return '<button type="button" class="' + (done ? "taken" : "") + '" data-action="dose" data-slot="' + esc(s.label) + '" data-qty="' + s.qty + '" aria-pressed="' + done + '">' +
-            esc(s.label) + " " + fmtNum(s.qty) + (done ? " taken" : "") + "</button>";
-        }).join("") +
-        [0.5, 1, 1.5].map(function (q) {
-          return '<button type="button" class="qty" data-action="dose-qty" data-qty="' + q + '" aria-label="Log ' + pillWord(q) + '">' + (q === 0.5 ? "1/2" : fmtNum(q)) + "</button>";
-        }).join("") + "</div>";
+    var st = statusLine(med, a, today);
+    var pickups;
+    if (a.fills.length) {
+      var anchorText = a.pickup.source === "refill" ? "From refill on " + fmtDate(a.pickup.date) : "From last pickup date, " + fmtDate(a.pickup.date);
+      var subLine = "Every " + med.daysSupply + " days" + (med.earlyDays ? ", up to " + med.earlyDays + (med.earlyDays === 1 ? " day" : " days") + " early" : "");
+      pickups = '<div class="panel"><h3>Pickups</h3>' +
+        '<p class="big">' + windowText(med, a.nextFill, today) + "</p>" +
+        '<p class="notes" style="margin-bottom:10px">' + subLine + "</p>" +
+        '<div class="fills">' + a.fills.map(function (d, i) {
+          return "<span" + (a.fillNeedsRx[i] ? ' class="blocked"' : "") + ">" + windowText(med, d, today) + (d === today ? " (today)" : "") + (a.fillNeedsRx[i] ? ", new Rx" : "") + "</span>";
+        }).join("") + "</div>" +
+        '<p class="notes small">' + anchorText + "</p></div>";
+    } else {
+      pickups = '<div class="panel"><h3>Pickups</h3><p class="notes">Log a refill or set a last pickup date in More settings, plus a days supply, to see the schedule.</p></div>';
     }
 
     var rxParts = [];
     if (med.refillsLeft != null) rxParts.push(med.refillsLeft === 0 ? "No refills left" : med.refillsLeft + (med.refillsLeft === 1 ? " refill left" : " refills left"));
     if (a.rxExpires) rxParts.push("Written " + fmtDate(med.rxWritten) + ", " + (a.rxExpired ? "expired " : "expires ") + fmtDate(a.rxExpires));
-    var rxHtml = rxParts.length
-      ? '<div class="section"><h3>Prescription</h3><p class="notes' + (a.newRx ? " warn" : "") + '">' + rxParts.join(". ") + "." + (a.newRx ? " Ask the prescriber for a new prescription." : "") + "</p></div>"
+    var rx = rxParts.length
+      ? '<div class="panel"><h3>Prescription</h3><p class="notes' + (a.newRx ? " warn" : "") + '">' + rxParts.join(". ") + "." + (a.newRx ? " Ask the prescriber for a new prescription." : "") + "</p></div>"
       : "";
 
-    var anchorText = "";
-    if (a.pickup) {
-      anchorText = a.pickup.source === "refill" ? "From refill on " + fmtDate(a.pickup.date) : "From last pickup date, " + fmtDate(a.pickup.date);
-    }
-    var fillsHtml = a.fills.length
-      ? '<div class="fills">' + a.fills.map(function (d, i) {
-          var cls = (i === 0 ? "due" : "") + (a.fillNeedsRx[i] ? " blocked" : "");
-          return "<span" + (cls.trim() ? ' class="' + cls.trim() + '"' : "") + ">" + windowText(med, d, today) + (d === today ? " (today)" : "") + (a.fillNeedsRx[i] ? ", new Rx" : "") + "</span>";
-        }).join("") + "</div>" + '<p class="notes anchor">' + anchorText + "</p>"
-      : '<p class="notes">Log a refill or set a last pickup date, plus a days supply, to see the schedule.</p>';
+    var notes = med.notes ? '<div class="panel"><h3>Notes</h3><p class="notes">' + esc(med.notes) + "</p></div>" : "";
+
+    var entryForm = '<div class="panel"><h3>Log an entry</h3>' +
+      '<form class="entry" data-action="add-entry">' +
+        '<label>Type<select name="type">' +
+          '<option value="refill">Refill (picked up pills)</option>' +
+          '<option value="recount">Recount (set total)</option>' +
+          '<option value="adjust">Adjust (plus or minus)</option>' +
+          '<option value="dose">Dose (pills taken)</option>' +
+        "</select></label>" +
+        '<label>Quantity<input name="qty" type="number" inputmode="decimal" step="0.5" required></label>' +
+        '<label>Date<input name="date" type="date" value="' + today + '" required></label>' +
+        '<label>Note<input name="note" autocomplete="off" placeholder="Optional"></label>' +
+        '<div class="full row end"><button type="submit" class="primary">Add entry</button></div>' +
+      "</form></div>";
 
     var entries = sortedEntries(med).slice().reverse();
-    var entriesHtml = entries.length
+    var history = '<div class="panel"><h3>History</h3>' + (entries.length
       ? '<ul class="entries">' + entries.map(function (e) {
           var kind = { refill: "Refill", recount: "Recount", adjust: "Adjust", dose: "Dose" + (e.slot ? " " + esc(e.slot) : "") }[e.type];
           var qty = e.type === "recount" ? "= " + fmtNum(e.qty) : e.type === "dose" ? "took " + fmtNum(e.qty) : (e.qty >= 0 ? "+" : "") + fmtNum(e.qty);
           return "<li>" +
             '<span class="date">' + fmtDate(e.date) + "</span>" +
-            '<span><span class="kind">' + kind + "</span> " + '<span class="qty">' + qty + "</span>" +
-            (e.note ? '<div class="note">' + esc(e.note) + "</div>" : "") + "</span>" +
+            '<span><span class="kind">' + kind + "</span> " + qty + (e.note ? '<div class="note">' + esc(e.note) + "</div>" : "") + "</span>" +
             '<button type="button" class="small link danger" data-action="del-entry" data-entry="' + e.id + '" aria-label="Delete entry">Delete</button>' +
             "</li>";
         }).join("") + "</ul>"
-      : '<p class="notes">No entries yet.</p>';
+      : '<p class="notes">No entries yet.</p>') + "</div>";
 
-    return '<div class="med" data-id="' + med.id + '">' +
-      '<div class="head">' +
-        '<h2 class="name">' + esc(med.name) + "</h2>" +
-        '<div class="chips">' + (a.newRx ? '<span class="chip rx">New Rx needed</span>' : "") +
-          (a.reminder ? '<span class="chip review">Check pharmacy</span>' : "") +
-          '<span class="status ' + a.status + '">' + statusLabel(a.status) + "</span></div>" +
-        '<div class="stats">' +
-          '<div class="stat"><span class="label">On hand</span><span class="value">' + fmtNum(a.count) + " pills</span>" +
-            '<span class="sub">' + fmtNum(med.perDay) + " per day</span></div>" +
-          '<div class="stat"><span class="label">Days left</span><span class="value">' + daysText + "</span>" +
-            '<span class="sub">Runs out ' + runOutText + "</span></div>" +
-          '<div class="stat"><span class="label">Next pickup</span><span class="value">' + fillText + "</span>" +
-            (fillSub ? '<span class="sub">' + fillSub + "</span>" : "") + "</div>" +
-          extraHtml +
-        "</div>" +
-        doseBar +
-      "</div>" +
-      "<details" + open + '><summary><span class="show">Show details</span><span class="hide">Hide details</span></summary>' +
-      '<div class="body">' +
-        (med.notes ? '<div class="section"><h3>Notes</h3><p class="notes">' + esc(med.notes) + "</p></div>" : "") +
-        rxHtml +
-        '<div class="section"><h3>Upcoming pickup dates</h3>' + fillsHtml + "</div>" +
-        '<div class="section"><h3>Log an entry</h3>' +
-          '<form class="entry" data-action="add-entry">' +
-            "<label>Type<select name=\"type\">" +
-              '<option value="refill">Refill (picked up pills)</option>' +
-              '<option value="recount">Recount (set total)</option>' +
-              '<option value="adjust">Adjust (plus or minus)</option>' +
-              '<option value="dose">Dose (pills taken)</option>' +
-            "</select></label>" +
-            '<label>Quantity<input name="qty" type="number" inputmode="decimal" step="0.5" required></label>' +
-            '<label>Date<input name="date" type="date" value="' + today + '" required></label>' +
-            '<label>Note<input name="note" autocomplete="off" placeholder="Optional"></label>' +
-            '<div class="full row end"><button type="submit" class="primary">Add entry</button></div>' +
-          "</form>" +
-        "</div>" +
-        '<div class="section"><h3>History</h3>' + entriesHtml + "</div>" +
-        '<div class="row split">' +
-          '<button type="button" class="small" data-action="edit">Edit medication</button>' +
-          '<button type="button" class="small danger" data-action="delete">Delete</button>' +
-        "</div>" +
-      "</div>" +
-    "</details></div>";
+    screenEl.innerHTML = '<div class="status ' + st.level + '" style="border:0;padding:0 2px 12px">' + st.text + "</div>" +
+      supply + pickups + rx + notes + entryForm + history +
+      '<div class="row end"><button type="button" class="danger" data-action="delete">Delete medication</button></div>';
   }
+
+  // ---------- Navigation ----------
+  function openDetail(id) {
+    view = { screen: "detail", id: id };
+    otherOpen = {};
+    history.pushState({ screen: "detail", id: id }, "");
+    render();
+  }
+  function goHome() {
+    if (history.state && history.state.screen === "detail") history.back();
+    else { view = { screen: "home", id: null }; render(); }
+  }
+  window.addEventListener("popstate", function (ev) {
+    var s = ev.state;
+    view = s && s.screen === "detail" && findMed(s.id) ? { screen: "detail", id: s.id } : { screen: "home", id: null };
+    render();
+  });
+  history.replaceState({ screen: "home" }, "");
 
   // ---------- Dialog helpers ----------
   var medDialog = document.getElementById("med-dialog");
   var medForm = document.getElementById("med-form");
   var confirmDialog = document.getElementById("confirm-dialog");
   var textDialog = document.getElementById("text-dialog");
+  var menuDialog = document.getElementById("menu-dialog");
   var confirmCb = null;
 
   document.querySelectorAll("dialog [data-close]").forEach(function (b) {
@@ -800,11 +738,6 @@
   confirmDialog.addEventListener("close", function () { confirmCb = null; });
   confirmDialog.addEventListener("click", function (ev) { if (ev.target === confirmDialog) confirmDialog.close(); });
 
-  function pillWord(n) {
-    if (n === 0.5) return "half a pill";
-    return fmtNum(n) + (n === 1 ? " pill" : " pills");
-  }
-
   var toastTimer = null;
   function toast(msg) {
     var t = document.getElementById("toast");
@@ -814,31 +747,43 @@
     toastTimer = setTimeout(function () { t.classList.remove("show"); }, 2600);
   }
 
+  // ---------- Medication form ----------
+  function syncFormVisibility() {
+    var on = medForm.elements.trackDoses.checked;
+    document.getElementById("slots-block").classList.toggle("hidden", !on);
+    document.getElementById("per-day-label").classList.toggle("hidden", on);
+  }
+  medForm.elements.trackDoses.addEventListener("change", syncFormVisibility);
+
   function openMedDialog(med) {
     medForm.reset();
+    var f = medForm.elements;
     document.getElementById("med-dialog-title").textContent = med ? "Edit medication" : "Add medication";
-    document.getElementById("start-count-label").style.display = med ? "none" : "";
-    medForm.elements.id.value = med ? med.id : "";
-    medForm.elements.name.value = med ? med.name : "";
-    medForm.elements.perDay.value = med ? med.perDay : 1;
-    medForm.elements.startCount.value = 0;
-    medForm.elements.lastFill.value = med ? med.lastFill : "";
-    medForm.elements.daysSupply.value = med ? (med.daysSupply || "") : 30;
-    medForm.elements.threshold.value = med ? med.threshold : 7;
-    medForm.elements.earlyDays.value = med ? med.earlyDays : 2;
-    medForm.elements.reminderDays.value = med ? med.reminderDays : 4;
-    medForm.elements.refillsLeft.value = med && med.refillsLeft != null ? med.refillsLeft : "";
-    medForm.elements.rxWritten.value = med ? med.rxWritten : "";
-    medForm.elements.rxMonths.value = med ? med.rxMonths : 12;
-    medForm.elements.trackDoses.checked = med ? med.trackDoses : false;
+    document.getElementById("start-count-label").classList.toggle("hidden", !!med);
+    document.getElementById("more-settings").open = false;
+    f.id.value = med ? med.id : "";
+    f.name.value = med ? med.name : "";
+    f.trackDoses.checked = med ? med.trackDoses : false;
     for (var si = 0; si < 3; si++) {
       var slot = med && med.slots[si];
-      medForm.elements["slot" + (si + 1) + "Label"].value = slot ? slot.label : (!med && si === 0 ? "AM" : "");
-      medForm.elements["slot" + (si + 1) + "Qty"].value = slot ? slot.qty : (!med && si === 0 ? 1 : "");
+      f["slot" + (si + 1) + "Label"].value = slot ? slot.label : "";
+      f["slot" + (si + 1) + "Qty"].value = slot ? slot.qty : "";
     }
-    medForm.elements.notes.value = med ? med.notes : "";
+    if (!med) { f.slot1Label.value = "AM"; f.slot1Qty.value = 1; }
+    f.perDay.value = med ? med.perDay : 1;
+    f.startCount.value = 0;
+    f.daysSupply.value = med ? (med.daysSupply || "") : 30;
+    f.lastFill.value = med ? med.lastFill : "";
+    f.earlyDays.value = med ? med.earlyDays : 2;
+    f.reminderDays.value = med ? med.reminderDays : 4;
+    f.threshold.value = med ? med.threshold : 7;
+    f.refillsLeft.value = med && med.refillsLeft != null ? med.refillsLeft : "";
+    f.rxWritten.value = med ? med.rxWritten : "";
+    f.rxMonths.value = med ? med.rxMonths : 12;
+    f.notes.value = med ? med.notes : "";
+    syncFormVisibility();
     medDialog.showModal();
-    setTimeout(function () { medForm.elements.name.focus(); }, 0);
+    setTimeout(function () { f.name.focus(); }, 0);
   }
 
   medForm.addEventListener("submit", function (ev) {
@@ -849,7 +794,7 @@
     var perDay = Number(f.perDay.value);
     if (!(perDay >= 0)) { f.perDay.focus(); toast("Pills per day must be zero or more."); return; }
     var lastFill = f.lastFill.value;
-    if (lastFill && !isDate(lastFill)) { f.lastFill.focus(); toast("Fill date is not valid."); return; }
+    if (lastFill && !isDate(lastFill)) { f.lastFill.focus(); toast("Pickup date is not valid."); return; }
     var slots = [];
     for (var si = 1; si <= 3; si++) {
       var lbl = f["slot" + si + "Label"].value.trim().slice(0, 12);
@@ -860,37 +805,26 @@
     if (trackDoses && slotTotal > 0) perDay = slotTotal;
     var id = f.id.value;
     var med = id ? findMed(id) : null;
+    var common = {
+      name: name, perDay: perDay, trackDoses: trackDoses, slots: slots, lastFill: lastFill,
+      daysSupply: Math.max(0, Math.floor(Number(f.daysSupply.value) || 0)),
+      threshold: Math.max(0, Math.floor(Number(f.threshold.value) || 0)),
+      earlyDays: Math.max(0, Math.floor(Number(f.earlyDays.value) || 0)),
+      reminderDays: Math.max(0, Math.floor(Number(f.reminderDays.value) || 0)),
+      refillsLeft: f.refillsLeft.value === "" ? null : Math.max(0, Math.floor(Number(f.refillsLeft.value) || 0)),
+      rxWritten: f.rxWritten.value,
+      rxMonths: Math.max(1, Math.floor(Number(f.rxMonths.value) || 12)),
+      notes: f.notes.value.trim()
+    };
     if (med) {
-      med.name = name;
-      med.perDay = perDay;
-      med.trackDoses = trackDoses;
-      med.slots = slots;
-      med.lastFill = lastFill;
-      med.daysSupply = Math.max(0, Math.floor(Number(f.daysSupply.value) || 0));
-      med.threshold = Math.max(0, Math.floor(Number(f.threshold.value) || 0));
-      med.earlyDays = Math.max(0, Math.floor(Number(f.earlyDays.value) || 0));
-      med.reminderDays = Math.max(0, Math.floor(Number(f.reminderDays.value) || 0));
-      med.refillsLeft = f.refillsLeft.value === "" ? null : Math.max(0, Math.floor(Number(f.refillsLeft.value) || 0));
-      med.rxWritten = f.rxWritten.value;
-      med.rxMonths = Math.max(1, Math.floor(Number(f.rxMonths.value) || 12));
-      med.notes = f.notes.value.trim();
+      for (var k in common) med[k] = common[k];
       toast("Medication updated.");
     } else {
       var startCount = Math.max(0, Number(f.startCount.value) || 0);
-      med = {
-        id: uid(), name: name, perDay: perDay, lastFill: lastFill, trackDoses: trackDoses, slots: slots,
-        daysSupply: Math.max(0, Math.floor(Number(f.daysSupply.value) || 0)),
-        threshold: Math.max(0, Math.floor(Number(f.threshold.value) || 0)),
-        earlyDays: Math.max(0, Math.floor(Number(f.earlyDays.value) || 0)),
-        reminderDays: Math.max(0, Math.floor(Number(f.reminderDays.value) || 0)),
-        refillsLeft: f.refillsLeft.value === "" ? null : Math.max(0, Math.floor(Number(f.refillsLeft.value) || 0)),
-        rxWritten: f.rxWritten.value,
-        rxMonths: Math.max(1, Math.floor(Number(f.rxMonths.value) || 12)),
-        notes: f.notes.value.trim(),
-        entries: [{ id: uid(), type: "recount", qty: startCount, date: todayStr(), note: "Starting count" }]
-      };
+      med = common;
+      med.id = uid();
+      med.entries = [{ id: uid(), type: "recount", qty: startCount, date: todayStr(), note: "Starting count", slot: "" }];
       state.meds.push(med);
-      openIds[med.id] = true;
       toast("Medication added.");
     }
     save();
@@ -898,31 +832,31 @@
     render();
   });
 
-  function findMed(id) {
-    for (var i = 0; i < state.meds.length; i++) if (state.meds[i].id === id) return state.meds[i];
-    return null;
-  }
-
   // ---------- Events ----------
-  document.getElementById("add-btn").addEventListener("click", function () { openMedDialog(null); });
-
-  listEl.addEventListener("toggle", function (ev) {
-    var d = ev.target;
-    var card = d && d.tagName === "DETAILS" && d.closest ? d.closest(".med") : null;
-    if (card) {
-      if (d.open) openIds[card.dataset.id] = true; else delete openIds[card.dataset.id];
-    }
-  }, true);
-
-  listEl.addEventListener("click", function (ev) {
+  topEl.addEventListener("click", function (ev) {
     var btn = ev.target.closest("button[data-action]");
     if (!btn) return;
-    var card = btn.closest(".med");
-    var med = findMed(card.dataset.id);
+    var action = btn.dataset.action;
+    if (action === "add") openMedDialog(null);
+    else if (action === "menu") menuDialog.showModal();
+    else if (action === "back") goHome();
+    else if (action === "edit") { var m = findMed(view.id); if (m) openMedDialog(m); }
+  });
+
+  screenEl.addEventListener("click", function (ev) {
+    var btn = ev.target.closest("button[data-action]");
+    if (!btn) return;
+    var card = btn.closest("[data-id]");
+    var med = card ? findMed(card.dataset.id) : (view.screen === "detail" ? findMed(view.id) : null);
     if (!med) return;
     var action = btn.dataset.action;
-    if (action === "dose") {
-      var today = todayStr();
+    var today = todayStr();
+    if (action === "open") {
+      openDetail(med.id);
+    } else if (action === "other") {
+      if (otherOpen[med.id]) delete otherOpen[med.id]; else otherOpen[med.id] = true;
+      render();
+    } else if (action === "dose") {
       var slot = btn.dataset.slot;
       var slotQty = Number(btn.dataset.qty) || 0;
       var existing = med.entries.filter(function (e) { return e.type === "dose" && e.date === today && e.slot === slot; })[0];
@@ -938,19 +872,16 @@
         }, "OK");
       }
     } else if (action === "dose-qty") {
-      var qtyToday = todayStr();
       var q = Number(btn.dataset.qty) || 0;
       confirmBox("Log " + pillWord(q) + "?", med.name + ", today.", function () {
-        med.entries.push({ id: uid(), type: "dose", qty: q, date: qtyToday, note: "", slot: "" });
+        med.entries.push({ id: uid(), type: "dose", qty: q, date: today, note: "", slot: "" });
         save(); render(); toast("Logged " + pillWord(q) + ".");
       }, "OK");
-    } else if (action === "edit") {
-      openMedDialog(med);
     } else if (action === "delete") {
       confirmBox("Delete " + med.name + "?", "This removes the medication and its whole history. Copy a backup first if you want to keep it.", function () {
         state.meds = state.meds.filter(function (m) { return m.id !== med.id; });
-        delete openIds[med.id];
-        save(); render(); toast("Deleted.");
+        save(); toast("Deleted.");
+        goHome();
       });
     } else if (action === "del-entry") {
       var eid = btn.dataset.entry;
@@ -963,12 +894,11 @@
     }
   });
 
-  listEl.addEventListener("submit", function (ev) {
+  screenEl.addEventListener("submit", function (ev) {
     var form = ev.target;
     if (!form.matches || !form.matches("form[data-action=add-entry]")) return;
     ev.preventDefault();
-    var card = form.closest(".med");
-    var med = findMed(card.dataset.id);
+    var med = findMed(view.id);
     if (!med) return;
     var type = form.elements.type.value;
     var qty = Number(form.elements.qty.value);
@@ -979,7 +909,6 @@
     if (type === "dose" && qty <= 0) { form.elements.qty.focus(); toast("Enter how many pills you took."); return; }
     med.entries.push({ id: uid(), type: type, qty: qty, date: date, note: form.elements.note.value.trim(), slot: "" });
     if (type === "refill" && med.refillsLeft != null && med.refillsLeft > 0) med.refillsLeft--;
-    openIds[med.id] = true;
     save(); render();
     toast({ refill: "Refill logged.", recount: "Recount saved.", adjust: "Adjustment logged.", dose: "Dose logged." }[type]);
   });
@@ -999,6 +928,7 @@
   }
 
   document.getElementById("copy-btn").addEventListener("click", function () {
+    menuDialog.close();
     var text = backupText();
     var fallback = function () {
       showTextDialog("Copy backup", "Select all of the text below and copy it.", text, false);
@@ -1018,7 +948,7 @@
     var n = next.meds.length;
     confirmBox("Replace current data?", "This will replace everything in this app with the backup (" + n + (n === 1 ? " medication" : " medications") + ").", function () {
       state = next;
-      openIds = {};
+      view = { screen: "home", id: null };
       save(); render();
       if (textDialog.open) textDialog.close();
       toast("Backup restored.");
@@ -1026,6 +956,7 @@
   }
 
   document.getElementById("paste-btn").addEventListener("click", function () {
+    menuDialog.close();
     var fallback = function () {
       showTextDialog("Paste backup", "Paste the backup text below, then press Restore.", "", true);
     };

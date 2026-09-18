@@ -26,6 +26,13 @@ The current count is derived from the ledger: the latest recount, plus later ref
 
 The page installs to your home screen, follows your system light or dark setting, and works with no network after the first visit.
 
+## Using the app
+
+- **Home** lists your medications. Each card shows the name, pills on hand, days left, the dose buttons if dose logging is on, and one status sentence such as "Next pickup Sep 29 to Oct 1, 2026" or "Running low, 5 days left".
+- **Tap a card** to open its detail screen: supply numbers, the pickup schedule, prescription status, the entry form for refills, recounts, adjustments, and back dated doses, and the full history. Edit and Delete live there too.
+- **Add** in the top bar creates a medication. The form shows the basics first; pharmacy dates, reminders, refills, and prescription details are under More settings.
+- **Menu** (the three dots) holds Copy backup and Paste backup.
+
 ## Enable GitHub Pages
 
 1. Push this repository to GitHub with `main` as the default branch.
