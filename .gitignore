@@ -1,0 +1,4 @@
+# Local tooling state, not part of the site
+.remember/
+.impeccable/
+__pycache__/

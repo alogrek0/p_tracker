@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Pill ledger</title>
+  <meta name="description" content="Personal medication supply ledger that works offline.">
+
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Pills">
+  <meta name="application-name" content="Pills">
+  <meta name="theme-color" content="#F5F8F6" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0B1F1A" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#0F6E5B">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --accent: #0F6E5B;
+      --accent-strong: #0B5646;
+      --accent-soft: #DCEFE9;
+      --bg: #F5F8F6;
+      --card: #FFFFFF;
+      --text: #12211D;
+      --muted: #5B6F68;
+      --line: #D9E3DF;
+      --warn: #9A6400;
+      --warn-soft: #FFF1D6;
+      --danger: #A3322A;
+      --danger-soft: #FBE3E0;
+      --ok: #0F6E5B;
+      --ok-soft: #DCEFE9;
+      --shadow: 0 1px 2px rgba(18, 33, 29, 0.06), 0 4px 14px rgba(18, 33, 29, 0.05);
+      --radius: 14px;
+      color-scheme: light dark;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --accent: #3FA58D;
+        --accent-strong: #5CBFA6;
+        --accent-soft: #163A32;
+        --bg: #0B1F1A;
+        --card: #12302A;
+        --text: #E6F0EC;
+        --muted: #9DB8AF;
+        --line: #234A41;
+        --warn: #F2C266;
+        --warn-soft: #3A2E10;
+        --danger: #F19A92;
+        --danger-soft: #45201D;
+        --ok: #5CBFA6;
+        --ok-soft: #163A32;
+        --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 4px 14px rgba(0, 0, 0, 0.25);
+      }
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      font-size: 16px;
+      line-height: 1.45;
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+      -webkit-font-smoothing: antialiased;
+      -webkit-tap-highlight-color: transparent;
+    }
+    main {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 20px 16px 120px;
+    }
+
+    header.top { display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px; }
+    header.top h1 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    header.top h1 svg { width: 30px; height: 30px; flex: none; }
+    .summary { color: var(--muted); font-size: 0.95rem; margin: 0; }
+    .toolbar { display: flex; flex-wrap: wrap; gap: 8px; }
+
+    button, .btn {
+      font: inherit;
+      font-weight: 600;
+      font-size: 0.95rem;
+      border: 1px solid transparent;
+      border-radius: 10px;
+      padding: 10px 14px;
+      min-height: 44px;
+      cursor: pointer;
+      color: var(--text);
+      background: var(--card);
+      border-color: var(--line);
+      box-shadow: var(--shadow);
+      transition: transform 0.05s ease, background 0.15s ease;
+    }
+    button:active { transform: translateY(1px); }
+    button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+    button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+    button.primary:hover { background: var(--accent-strong); }
+    button.danger { color: var(--danger); }
+    button.small { min-height: 36px; padding: 6px 10px; font-size: 0.85rem; box-shadow: none; }
+    button.link { background: transparent; border-color: transparent; box-shadow: none; color: var(--accent); padding: 6px 8px; min-height: 36px; }
+    @media (prefers-color-scheme: dark) { button.primary { color: #06201A; } }
+
+    .empty {
+      background: var(--card);
+      border: 1px dashed var(--line);
+      border-radius: var(--radius);
+      padding: 28px 20px;
+      text-align: center;
+      color: var(--muted);
+    }
+    .empty strong { color: var(--text); display: block; margin-bottom: 6px; font-size: 1.05rem; }
+
+    .med {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      margin-bottom: 12px;
+      overflow: hidden;
+    }
+    .med summary {
+      list-style: none;
+      cursor: pointer;
+      padding: 14px 16px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 6px 12px;
+    }
+    .med summary::-webkit-details-marker { display: none; }
+    .med summary:focus-visible { outline: 3px solid var(--accent); outline-offset: -3px; }
+    .med .name { font-weight: 700; font-size: 1.1rem; margin: 0; grid-column: 1; }
+    .status {
+      grid-column: 2; grid-row: 1;
+      align-self: start;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      padding: 4px 9px;
+      border-radius: 999px;
+      background: var(--ok-soft);
+      color: var(--ok);
+      white-space: nowrap;
+    }
+    .status.low { background: var(--warn-soft); color: var(--warn); }
+    .status.shortfall, .status.out { background: var(--danger-soft); color: var(--danger); }
+    .stats {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 8px 14px;
+      margin-top: 4px;
+    }
+    .stat { display: flex; flex-direction: column; }
+    .stat .label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+    .stat .value { font-weight: 600; font-size: 1rem; }
+    .stat .value.neg { color: var(--danger); }
+    .stat .value.pos { color: var(--ok); }
+    .stat .sub { font-size: 0.8rem; color: var(--muted); }
+
+    .body { border-top: 1px solid var(--line); padding: 14px 16px 16px; display: grid; gap: 16px; }
+    .section h3 { margin: 0 0 8px; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+    .notes { margin: 0; color: var(--muted); white-space: pre-wrap; }
+
+    .fills { display: flex; flex-wrap: wrap; gap: 6px; }
+    .fills span { background: var(--accent-soft); color: var(--accent-strong); font-weight: 600; font-size: 0.85rem; padding: 5px 10px; border-radius: 999px; }
+    .fills span.due { outline: 2px solid var(--accent); }
+
+    .entries { list-style: none; margin: 0; padding: 0; }
+    .entries li {
+      display: grid;
+      grid-template-columns: 92px 1fr auto;
+      gap: 8px;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--line);
+      font-size: 0.92rem;
+    }
+    .entries li:last-child { border-bottom: 0; }
+    .entries .date { color: var(--muted); font-variant-numeric: tabular-nums; }
+    .entries .kind { font-weight: 600; }
+    .entries .note { color: var(--muted); font-size: 0.85rem; }
+    .entries .qty { font-variant-numeric: tabular-nums; }
+
+    form.entry {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    form.entry .full { grid-column: 1 / -1; }
+    label { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; font-weight: 600; color: var(--muted); }
+    input, select, textarea {
+      font: inherit;
+      color: var(--text);
+      background: var(--bg);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px 12px;
+      min-height: 44px;
+      width: 100%;
+    }
+    textarea { min-height: 80px; resize: vertical; }
+    input:focus, select:focus, textarea:focus { outline: 3px solid var(--accent); outline-offset: 0; border-color: var(--accent); }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .row.end { justify-content: flex-end; }
+    .row.split { justify-content: space-between; }
+
+    dialog {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: var(--card);
+      color: var(--text);
+      padding: 0;
+      width: min(560px, calc(100vw - 32px));
+      box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+    }
+    dialog::backdrop { background: rgba(6, 20, 16, 0.5); }
+    dialog form.box, dialog .box { padding: 20px; display: grid; gap: 12px; }
+    dialog h2 { margin: 0 0 4px; font-size: 1.2rem; }
+    dialog p.help { margin: 0; color: var(--muted); }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    @media (max-width: 420px) { .grid2 { grid-template-columns: 1fr; } }
+
+    #update-bar {
+      position: fixed;
+      left: 50%;
+      bottom: calc(16px + env(safe-area-inset-bottom));
+      transform: translateX(-50%);
+      width: min(560px, calc(100vw - 32px));
+      background: var(--accent);
+      color: #fff;
+      border-radius: 14px;
+      padding: 12px 14px;
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      z-index: 20;
+    }
+    #update-bar.show { display: flex; }
+    #update-bar button { background: #fff; color: var(--accent-strong); border-color: #fff; box-shadow: none; }
+    @media (prefers-color-scheme: dark) { #update-bar { color: #06201A; } #update-bar button { background: #06201A; color: #fff; border-color: #06201A; } }
+
+    #toast {
+      position: fixed;
+      left: 50%;
+      bottom: calc(16px + env(safe-area-inset-bottom));
+      transform: translateX(-50%) translateY(20px);
+      background: var(--text);
+      color: var(--bg);
+      padding: 10px 16px;
+      border-radius: 999px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      z-index: 30;
+      max-width: calc(100vw - 32px);
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  </style>
+</head>
+<body>
+<main>
+  <header class="top">
+    <h1>
+      <svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="16" fill="#0F6E5B"/><g transform="rotate(-40 32 32)"><rect x="12" y="23" width="40" height="18" rx="9" fill="#BFE6DA"/><path d="M32 23h11a9 9 0 0 1 0 18H32z" fill="#ffffff"/><rect x="18" y="27" width="10" height="3" rx="1.5" fill="#ffffff" opacity="0.7"/></g></svg>
+      Pill ledger
+    </h1>
+    <p class="summary" id="summary">Loading</p>
+    <div class="toolbar">
+      <button class="primary" id="add-btn" type="button">Add medication</button>
+      <button id="copy-btn" type="button">Copy backup</button>
+      <button id="paste-btn" type="button">Paste backup</button>
+    </div>
+  </header>
+
+  <section id="list" aria-live="polite"></section>
+</main>
+
+<div id="update-bar" role="status">
+  <span>Update available. Reload to get the latest version.</span>
+  <button type="button" id="reload-btn">Reload</button>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<dialog id="med-dialog">
+  <form class="box" method="dialog" id="med-form" novalidate>
+    <h2 id="med-dialog-title">Add medication</h2>
+    <input type="hidden" name="id">
+    <label>Name
+      <input name="name" required autocomplete="off" placeholder="Metformin 500 mg">
+    </label>
+    <div class="grid2">
+      <label>Pills per day
+        <input name="perDay" type="number" inputmode="decimal" min="0" step="0.25" required value="1">
+      </label>
+      <label id="start-count-label">Pills on hand today
+        <input name="startCount" type="number" inputmode="decimal" min="0" step="0.5" value="0">
+      </label>
+    </div>
+    <div class="grid2">
+      <label>Last pharmacy fill date
+        <input name="lastFill" type="date">
+      </label>
+      <label>Days supply per fill
+        <input name="daysSupply" type="number" inputmode="numeric" min="1" step="1" value="30">
+      </label>
+    </div>
+    <label>Low supply warning (days left)
+      <input name="threshold" type="number" inputmode="numeric" min="0" step="1" value="7">
+    </label>
+    <label>Notes
+      <textarea name="notes" placeholder="Dose instructions, pharmacy, prescriber"></textarea>
+    </label>
+    <div class="row end">
+      <button type="button" data-close>Cancel</button>
+      <button type="submit" class="primary" id="med-save">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="confirm-dialog">
+  <div class="box">
+    <h2 id="confirm-title">Are you sure?</h2>
+    <p class="help" id="confirm-text"></p>
+    <div class="row end">
+      <button type="button" data-close>Cancel</button>
+      <button type="button" class="primary" id="confirm-ok">Confirm</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="text-dialog">
+  <div class="box">
+    <h2 id="text-title">Backup</h2>
+    <p class="help" id="text-help"></p>
+    <textarea id="text-area" rows="8" spellcheck="false"></textarea>
+    <div class="row end">
+      <button type="button" data-close>Close</button>
+      <button type="button" class="primary" id="text-ok">Restore</button>
+    </div>
+  </div>
+</dialog>
+
+<script>
+(function () {
+  "use strict";
+
+  var STORAGE_KEY = "pill-ledger-v1";
+  var FILL_COUNT = 4;
+
+  // ---------- Date helpers (YYYY-MM-DD strings, arithmetic in UTC) ----------
+  function pad(n) { return (n < 10 ? "0" : "") + n; }
+  function todayStr() {
+    var d = new Date();
+    return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+  }
+  function toUTC(s) {
+    var p = s.split("-").map(Number);
+    return Date.UTC(p[0], p[1] - 1, p[2]);
+  }
+  function isDate(s) { return typeof s === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s) && !isNaN(toUTC(s)); }
+  function daysBetween(a, b) { return Math.round((toUTC(b) - toUTC(a)) / 86400000); }
+  function addDays(s, n) { return new Date(toUTC(s) + n * 86400000).toISOString().slice(0, 10); }
+  function fmtDate(s) {
+    if (!isDate(s)) return "";
+    var d = new Date(toUTC(s));
+    return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+  }
+  function fmtNum(n) {
+    if (!isFinite(n)) return "";
+    return String(Math.round(n * 100) / 100);
+  }
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+
+  // ---------- State ----------
+  var state = load();
+  var openIds = {};
+
+  function emptyState() { return { version: 1, meds: [] }; }
+  function load() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return emptyState();
+      return normalize(JSON.parse(raw)) || emptyState();
+    } catch (e) {
+      console.warn("Could not read saved data", e);
+      return emptyState();
+    }
+  }
+  function save() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+    catch (e) { toast("Could not save. Storage may be full or blocked."); }
+  }
+  function normalize(obj) {
+    if (!obj || typeof obj !== "object" || !Array.isArray(obj.meds)) return null;
+    var meds = obj.meds.filter(function (m) { return m && typeof m === "object"; }).map(function (m) {
+      return {
+        id: String(m.id || uid()),
+        name: String(m.name || "Untitled"),
+        perDay: Math.max(0, Number(m.perDay) || 0),
+        threshold: Math.max(0, Math.floor(Number(m.threshold) || 0)),
+        lastFill: isDate(m.lastFill) ? m.lastFill : "",
+        daysSupply: Math.max(0, Math.floor(Number(m.daysSupply) || 0)),
+        notes: String(m.notes || ""),
+        entries: Array.isArray(m.entries) ? m.entries.filter(function (e) {
+          return e && isDate(e.date) && ["refill", "recount", "adjust"].indexOf(e.type) >= 0;
+        }).map(function (e) {
+          return { id: String(e.id || uid()), type: e.type, qty: Number(e.qty) || 0, date: e.date, note: String(e.note || "") };
+        }) : []
+      };
+    });
+    return { version: 1, meds: meds };
+  }
+
+  // ---------- Pure calculations ----------
+  function sortedEntries(med) {
+    return med.entries.map(function (e, i) { return { e: e, i: i }; })
+      .sort(function (a, b) { return a.e.date < b.e.date ? -1 : a.e.date > b.e.date ? 1 : a.i - b.i; })
+      .map(function (x) { return x.e; });
+  }
+
+  // Current count: latest recount on or before today, plus later refills and
+  // adjustments on or before today, minus pills per day for each day since the recount.
+  function computeCount(med, today) {
+    var list = sortedEntries(med).filter(function (e) { return e.date <= today; });
+    var anchorIdx = -1;
+    for (var i = list.length - 1; i >= 0; i--) {
+      if (list[i].type === "recount") { anchorIdx = i; break; }
+    }
+    var base = 0, anchorDate = null;
+    if (anchorIdx >= 0) { base = list[anchorIdx].qty; anchorDate = list[anchorIdx].date; }
+    else if (list.length) { anchorDate = list[0].date; }
+    else { return { count: 0, raw: 0, anchorDate: null }; }
+    var adds = 0;
+    for (var j = anchorIdx + 1; j < list.length; j++) {
+      if (list[j].type === "refill" || list[j].type === "adjust") adds += list[j].qty;
+    }
+    var elapsed = Math.max(0, daysBetween(anchorDate, today));
+    var raw = base + adds - med.perDay * elapsed;
+    return { count: Math.max(0, raw), raw: raw, anchorDate: anchorDate };
+  }
+
+  function daysRemaining(count, perDay) {
+    if (perDay <= 0) return Infinity;
+    return Math.floor(count / perDay + 1e-9);
+  }
+
+  function runOutDate(today, days) {
+    if (!isFinite(days)) return null;
+    return addDays(today, days);
+  }
+
+  function nextFillDates(med, today, n) {
+    if (!isDate(med.lastFill) || med.daysSupply <= 0) return [];
+    var d = med.lastFill;
+    var guard = 0;
+    while (d < today && guard < 5000) { d = addDays(d, med.daysSupply); guard++; }
+    var out = [];
+    for (var i = 0; i < n; i++) { out.push(d); d = addDays(d, med.daysSupply); }
+    return out;
+  }
+
+  function extraSupply(count, perDay, today, nextFill) {
+    if (!nextFill) return null;
+    var needed = perDay * daysBetween(today, nextFill);
+    var pills = count - needed;
+    return { pills: pills, days: perDay > 0 ? pills / perDay : null, needed: needed };
+  }
+
+  function analyze(med, today) {
+    var c = computeCount(med, today);
+    var days = daysRemaining(c.count, med.perDay);
+    var fills = nextFillDates(med, today, FILL_COUNT);
+    var nextFill = fills.length ? fills[0] : null;
+    var extra = extraSupply(c.count, med.perDay, today, nextFill);
+    var status = "ok";
+    if (c.count <= 0 && med.perDay > 0) status = "out";
+    else if (extra && extra.pills < 0) status = "shortfall";
+    else if (isFinite(days) && days <= med.threshold) status = "low";
+    return { count: c.count, anchorDate: c.anchorDate, days: days, runOut: runOutDate(today, days), fills: fills, nextFill: nextFill, extra: extra, status: status };
+  }
+
+  // ---------- Rendering ----------
+  var listEl = document.getElementById("list");
+  var summaryEl = document.getElementById("summary");
+
+  function statusLabel(s) {
+    return { ok: "OK", low: "Low", shortfall: "Shortfall", out: "Out" }[s] || s;
+  }
+
+  function render() {
+    var today = todayStr();
+    if (!state.meds.length) {
+      summaryEl.textContent = "No medications yet.";
+      listEl.innerHTML = '<div class="empty"><strong>Nothing tracked yet</strong>Add a medication to start counting pills, projecting when you run out, and planning refills.</div>';
+      return;
+    }
+    var attention = 0;
+    var html = state.meds.map(function (med) {
+      var a = analyze(med, today);
+      if (a.status !== "ok") attention++;
+      return renderMed(med, a, today);
+    }).join("");
+    listEl.innerHTML = html;
+    summaryEl.textContent = state.meds.length + (state.meds.length === 1 ? " medication" : " medications") +
+      (attention ? ", " + attention + " need" + (attention === 1 ? "s" : "") + " attention" : ", all fine");
+  }
+
+  function renderMed(med, a, today) {
+    var open = openIds[med.id] ? " open" : "";
+    var daysText = isFinite(a.days) ? a.days + (a.days === 1 ? " day" : " days") : "No daily dose";
+    var runOutText = a.runOut ? fmtDate(a.runOut) : "n/a";
+    var fillText = a.nextFill ? fmtDate(a.nextFill) : "Not set";
+    var extraHtml;
+    if (a.extra) {
+      var cls = a.extra.pills < 0 ? "neg" : a.extra.pills > 0 ? "pos" : "";
+      var sign = a.extra.pills > 0 ? "+" : "";
+      var daysPart = a.extra.days == null ? "" : ' <span class="sub">(' + sign + fmtNum(a.extra.days) + " days)</span>";
+      extraHtml = '<div class="stat"><span class="label">Extra at next fill</span><span class="value ' + cls + '">' + sign + fmtNum(a.extra.pills) + " pills" + daysPart + "</span></div>";
+    } else {
+      extraHtml = '<div class="stat"><span class="label">Extra at next fill</span><span class="value">Set a fill date</span></div>';
+    }
+
+    var fillsHtml = a.fills.length
+      ? '<div class="fills">' + a.fills.map(function (d, i) {
+          return "<span" + (i === 0 ? ' class="due"' : "") + ">" + fmtDate(d) + (d === today ? " (today)" : "") + "</span>";
+        }).join("") + "</div>"
+      : '<p class="notes">Add a last fill date and days supply to see the refill schedule.</p>';
+
+    var entries = sortedEntries(med).slice().reverse();
+    var entriesHtml = entries.length
+      ? '<ul class="entries">' + entries.map(function (e) {
+          var kind = { refill: "Refill", recount: "Recount", adjust: "Adjust" }[e.type];
+          var qty = e.type === "recount" ? "= " + fmtNum(e.qty) : (e.qty >= 0 ? "+" : "") + fmtNum(e.qty);
+          return "<li>" +
+            '<span class="date">' + fmtDate(e.date) + "</span>" +
+            '<span><span class="kind">' + kind + "</span> " + '<span class="qty">' + qty + "</span>" +
+            (e.note ? '<div class="note">' + esc(e.note) + "</div>" : "") + "</span>" +
+            '<button type="button" class="small link danger" data-action="del-entry" data-entry="' + e.id + '" aria-label="Delete entry">Delete</button>' +
+            "</li>";
+        }).join("") + "</ul>"
+      : '<p class="notes">No entries yet.</p>';
+
+    return '<details class="med" data-id="' + med.id + '"' + open + ">" +
+      "<summary>" +
+        '<h2 class="name">' + esc(med.name) + "</h2>" +
+        '<span class="status ' + a.status + '">' + statusLabel(a.status) + "</span>" +
+        '<div class="stats">' +
+          '<div class="stat"><span class="label">On hand</span><span class="value">' + fmtNum(a.count) + " pills</span>" +
+            '<span class="sub">' + fmtNum(med.perDay) + " per day</span></div>" +
+          '<div class="stat"><span class="label">Days left</span><span class="value">' + daysText + "</span>" +
+            '<span class="sub">Runs out ' + runOutText + "</span></div>" +
+          '<div class="stat"><span class="label">Next fill</span><span class="value">' + fillText + "</span>" +
+            (med.daysSupply ? '<span class="sub">Every ' + med.daysSupply + " days</span>" : "") + "</div>" +
+          extraHtml +
+        "</div>" +
+      "</summary>" +
+      '<div class="body">' +
+        (med.notes ? '<div class="section"><h3>Notes</h3><p class="notes">' + esc(med.notes) + "</p></div>" : "") +
+        '<div class="section"><h3>Upcoming fill dates</h3>' + fillsHtml + "</div>" +
+        '<div class="section"><h3>Log an entry</h3>' +
+          '<form class="entry" data-action="add-entry">' +
+            "<label>Type<select name=\"type\">" +
+              '<option value="refill">Refill (add pills)</option>' +
+              '<option value="recount">Recount (set total)</option>' +
+              '<option value="adjust">Adjust (plus or minus)</option>' +
+            "</select></label>" +
+            '<label>Quantity<input name="qty" type="number" inputmode="decimal" step="0.5" required></label>' +
+            '<label>Date<input name="date" type="date" value="' + today + '" required></label>' +
+            '<label>Note<input name="note" autocomplete="off" placeholder="Optional"></label>' +
+            '<div class="full row end"><button type="submit" class="primary">Add entry</button></div>' +
+          "</form>" +
+        "</div>" +
+        '<div class="section"><h3>History</h3>' + entriesHtml + "</div>" +
+        '<div class="row split">' +
+          '<button type="button" class="small" data-action="edit">Edit medication</button>' +
+          '<button type="button" class="small danger" data-action="delete">Delete</button>' +
+        "</div>" +
+      "</div>" +
+    "</details>";
+  }
+
+  // ---------- Dialog helpers ----------
+  var medDialog = document.getElementById("med-dialog");
+  var medForm = document.getElementById("med-form");
+  var confirmDialog = document.getElementById("confirm-dialog");
+  var textDialog = document.getElementById("text-dialog");
+  var confirmCb = null;
+
+  document.querySelectorAll("dialog [data-close]").forEach(function (b) {
+    b.addEventListener("click", function () { b.closest("dialog").close(); });
+  });
+
+  function confirmBox(title, text, cb) {
+    document.getElementById("confirm-title").textContent = title;
+    document.getElementById("confirm-text").textContent = text;
+    confirmCb = cb;
+    confirmDialog.showModal();
+  }
+  document.getElementById("confirm-ok").addEventListener("click", function () {
+    confirmDialog.close();
+    if (confirmCb) { var cb = confirmCb; confirmCb = null; cb(); }
+  });
+
+  var toastTimer = null;
+  function toast(msg) {
+    var t = document.getElementById("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.classList.remove("show"); }, 2600);
+  }
+
+  function openMedDialog(med) {
+    medForm.reset();
+    document.getElementById("med-dialog-title").textContent = med ? "Edit medication" : "Add medication";
+    document.getElementById("start-count-label").style.display = med ? "none" : "";
+    medForm.elements.id.value = med ? med.id : "";
+    medForm.elements.name.value = med ? med.name : "";
+    medForm.elements.perDay.value = med ? med.perDay : 1;
+    medForm.elements.startCount.value = 0;
+    medForm.elements.lastFill.value = med ? med.lastFill : "";
+    medForm.elements.daysSupply.value = med ? (med.daysSupply || "") : 30;
+    medForm.elements.threshold.value = med ? med.threshold : 7;
+    medForm.elements.notes.value = med ? med.notes : "";
+    medDialog.showModal();
+    setTimeout(function () { medForm.elements.name.focus(); }, 0);
+  }
+
+  medForm.addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    var f = medForm.elements;
+    var name = f.name.value.trim();
+    if (!name) { f.name.focus(); toast("Name is required."); return; }
+    var perDay = Number(f.perDay.value);
+    if (!(perDay >= 0)) { f.perDay.focus(); toast("Pills per day must be zero or more."); return; }
+    var lastFill = f.lastFill.value;
+    if (lastFill && !isDate(lastFill)) { f.lastFill.focus(); toast("Fill date is not valid."); return; }
+    var id = f.id.value;
+    var med = id ? findMed(id) : null;
+    if (med) {
+      med.name = name;
+      med.perDay = perDay;
+      med.lastFill = lastFill;
+      med.daysSupply = Math.max(0, Math.floor(Number(f.daysSupply.value) || 0));
+      med.threshold = Math.max(0, Math.floor(Number(f.threshold.value) || 0));
+      med.notes = f.notes.value.trim();
+      toast("Medication updated.");
+    } else {
+      var startCount = Math.max(0, Number(f.startCount.value) || 0);
+      med = {
+        id: uid(), name: name, perDay: perDay, lastFill: lastFill,
+        daysSupply: Math.max(0, Math.floor(Number(f.daysSupply.value) || 0)),
+        threshold: Math.max(0, Math.floor(Number(f.threshold.value) || 0)),
+        notes: f.notes.value.trim(),
+        entries: [{ id: uid(), type: "recount", qty: startCount, date: todayStr(), note: "Starting count" }]
+      };
+      state.meds.push(med);
+      openIds[med.id] = true;
+      toast("Medication added.");
+    }
+    save();
+    medDialog.close();
+    render();
+  });
+
+  function findMed(id) {
+    for (var i = 0; i < state.meds.length; i++) if (state.meds[i].id === id) return state.meds[i];
+    return null;
+  }
+
+  // ---------- Events ----------
+  document.getElementById("add-btn").addEventListener("click", function () { openMedDialog(null); });
+
+  listEl.addEventListener("toggle", function (ev) {
+    var d = ev.target;
+    if (d && d.classList && d.classList.contains("med")) {
+      if (d.open) openIds[d.dataset.id] = true; else delete openIds[d.dataset.id];
+    }
+  }, true);
+
+  listEl.addEventListener("click", function (ev) {
+    var btn = ev.target.closest("button[data-action]");
+    if (!btn) return;
+    var card = btn.closest(".med");
+    var med = findMed(card.dataset.id);
+    if (!med) return;
+    var action = btn.dataset.action;
+    if (action === "edit") {
+      openMedDialog(med);
+    } else if (action === "delete") {
+      confirmBox("Delete " + med.name + "?", "This removes the medication and its whole history. Copy a backup first if you want to keep it.", function () {
+        state.meds = state.meds.filter(function (m) { return m.id !== med.id; });
+        delete openIds[med.id];
+        save(); render(); toast("Deleted.");
+      });
+    } else if (action === "del-entry") {
+      var eid = btn.dataset.entry;
+      confirmBox("Delete this entry?", "The current count will be recalculated from the remaining entries.", function () {
+        med.entries = med.entries.filter(function (e) { return e.id !== eid; });
+        save(); render(); toast("Entry deleted.");
+      });
+    }
+  });
+
+  listEl.addEventListener("submit", function (ev) {
+    var form = ev.target;
+    if (!form.matches || !form.matches("form[data-action=add-entry]")) return;
+    ev.preventDefault();
+    var card = form.closest(".med");
+    var med = findMed(card.dataset.id);
+    if (!med) return;
+    var type = form.elements.type.value;
+    var qty = Number(form.elements.qty.value);
+    var date = form.elements.date.value;
+    if (isNaN(qty) || form.elements.qty.value === "") { form.elements.qty.focus(); toast("Enter a quantity."); return; }
+    if (!isDate(date)) { form.elements.date.focus(); toast("Enter a valid date."); return; }
+    if (type !== "adjust" && qty < 0) { form.elements.qty.focus(); toast("Quantity cannot be negative for this type."); return; }
+    med.entries.push({ id: uid(), type: type, qty: qty, date: date, note: form.elements.note.value.trim() });
+    openIds[med.id] = true;
+    save(); render();
+    toast({ refill: "Refill logged.", recount: "Recount saved.", adjust: "Adjustment logged." }[type]);
+  });
+
+  // ---------- Backup ----------
+  function backupText() { return JSON.stringify(state); }
+
+  function showTextDialog(title, help, value, restoreMode) {
+    document.getElementById("text-title").textContent = title;
+    document.getElementById("text-help").textContent = help;
+    var ta = document.getElementById("text-area");
+    ta.value = value || "";
+    ta.readOnly = !restoreMode;
+    document.getElementById("text-ok").style.display = restoreMode ? "" : "none";
+    textDialog.showModal();
+    setTimeout(function () { ta.focus(); if (!restoreMode) ta.select(); }, 0);
+  }
+
+  document.getElementById("copy-btn").addEventListener("click", function () {
+    var text = backupText();
+    var fallback = function () {
+      showTextDialog("Copy backup", "Select all of the text below and copy it.", text, false);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { toast("Backup copied to clipboard."); }, fallback);
+    } else {
+      fallback();
+    }
+  });
+
+  function restoreFrom(text) {
+    var parsed;
+    try { parsed = JSON.parse(text); } catch (e) { toast("That text is not a valid backup."); return; }
+    var next = normalize(parsed);
+    if (!next) { toast("That text is not a pill ledger backup."); return; }
+    var n = next.meds.length;
+    confirmBox("Replace current data?", "This will replace everything in this app with the backup (" + n + (n === 1 ? " medication" : " medications") + ").", function () {
+      state = next;
+      openIds = {};
+      save(); render();
+      if (textDialog.open) textDialog.close();
+      toast("Backup restored.");
+    });
+  }
+
+  document.getElementById("paste-btn").addEventListener("click", function () {
+    var fallback = function () {
+      showTextDialog("Paste backup", "Paste the backup text below, then press Restore.", "", true);
+    };
+    if (navigator.clipboard && navigator.clipboard.readText) {
+      navigator.clipboard.readText().then(function (text) {
+        if (text && text.trim()) restoreFrom(text.trim()); else fallback();
+      }, fallback);
+    } else {
+      fallback();
+    }
+  });
+  document.getElementById("text-ok").addEventListener("click", function () {
+    restoreFrom(document.getElementById("text-area").value.trim());
+  });
+
+  // ---------- Keep projections fresh across midnight ----------
+  var lastRenderDay = todayStr();
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "visible" && todayStr() !== lastRenderDay) { lastRenderDay = todayStr(); render(); }
+  });
+
+  render();
+
+  // ---------- Service worker ----------
+  if ("serviceWorker" in navigator) {
+    var updateBar = document.getElementById("update-bar");
+    var waitingWorker = null;
+    var reloading = false;
+
+    var showUpdate = function (worker) {
+      waitingWorker = worker;
+      updateBar.classList.add("show");
+    };
+    document.getElementById("reload-btn").addEventListener("click", function () {
+      if (waitingWorker) waitingWorker.postMessage({ type: "SKIP_WAITING" });
+      else location.reload();
+    });
+    navigator.serviceWorker.addEventListener("controllerchange", function () {
+      if (reloading) return;
+      reloading = true;
+      location.reload();
+    });
+
+    window.addEventListener("load", function () {
+      navigator.serviceWorker.register("sw.js").then(function (reg) {
+        if (reg.waiting && navigator.serviceWorker.controller) showUpdate(reg.waiting);
+        reg.addEventListener("updatefound", function () {
+          var nw = reg.installing;
+          if (!nw) return;
+          nw.addEventListener("statechange", function () {
+            if (nw.state === "installed" && navigator.serviceWorker.controller) showUpdate(nw);
+          });
+        });
+        document.addEventListener("visibilitychange", function () {
+          if (document.visibilityState === "visible") reg.update().catch(function () {});
+        });
+      }).catch(function (err) {
+        console.warn("Service worker registration failed", err);
+      });
+    });
+  }
+})();
+</script>
+</body>
+</html>
