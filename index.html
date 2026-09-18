@@ -148,6 +148,9 @@
     .med summary:focus-visible { outline: 3px solid var(--accent); outline-offset: -3px; }
     .med .name { font-weight: 700; font-size: 1.1rem; margin: 0; grid-column: 1; }
     .chips { grid-column: 2; grid-row: 1; align-self: start; display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+    .chip.rx { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; padding: 3px 8px; border-radius: 999px; background: var(--danger-soft); color: var(--danger); border: 1px solid var(--danger); white-space: nowrap; }
+    .fills span.blocked { background: var(--danger-soft); color: var(--danger); }
+    .notes.warn { color: var(--danger); }
     .chip.review { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; padding: 3px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-strong); border: 1px solid var(--accent); white-space: nowrap; }
     .status {
       font-size: 0.75rem;
@@ -331,6 +334,19 @@
       </label>
     </div>
     <div class="grid2">
+      <label>Refills remaining
+        <input name="refillsLeft" type="number" inputmode="numeric" min="0" step="1" placeholder="Leave blank to skip">
+        <span class="hint">Goes down by one each time you log a refill.</span>
+      </label>
+      <label>Prescription written date
+        <input name="rxWritten" type="date">
+      </label>
+    </div>
+    <label>Prescription valid for (months)
+      <input name="rxMonths" type="number" inputmode="numeric" min="1" step="1" value="12">
+      <span class="hint">Usually 12. Schedule III and IV prescriptions expire after 6 months and allow at most 5 refills.</span>
+    </label>
+    <div class="grid2">
       <label>Early pickup (days before due)
         <input name="earlyDays" type="number" inputmode="numeric" min="0" step="1" value="2">
         <span class="hint">How early the pharmacy lets you collect. Use 0 or 1 for controlled medications.</span>
@@ -443,6 +459,9 @@
         daysSupply: Math.max(0, Math.floor(Number(m.daysSupply) || 0)),
         earlyDays: m.earlyDays == null ? 2 : Math.max(0, Math.floor(Number(m.earlyDays) || 0)),
         reminderDays: m.reminderDays == null ? 4 : Math.max(0, Math.floor(Number(m.reminderDays) || 0)),
+        refillsLeft: (m.refillsLeft == null || m.refillsLeft === "") ? null : Math.max(0, Math.floor(Number(m.refillsLeft) || 0)),
+        rxWritten: isDate(m.rxWritten) ? m.rxWritten : "",
+        rxMonths: m.rxMonths == null ? 12 : Math.max(1, Math.floor(Number(m.rxMonths) || 12)),
         notes: String(m.notes || ""),
         entries: Array.isArray(m.entries) ? m.entries.filter(function (e) {
           return e && isDate(e.date) && ["refill", "recount", "adjust"].indexOf(e.type) >= 0;
@@ -506,7 +525,8 @@
   function nextFillDates(med, today, n) {
     var anchor = lastPickupDate(med, today);
     if (!anchor || med.daysSupply <= 0) return [];
-    var d = anchor.date;
+    // The anchor is a pickup that already happened, so the next one is a full supply later.
+    var d = addDays(anchor.date, med.daysSupply);
     var guard = 0;
     while (d < today && guard < 5000) { d = addDays(d, med.daysSupply); guard++; }
     var out = [];
@@ -530,11 +550,26 @@
     var nextEarliest = nextFill ? earliestPickup(med, nextFill, today) : null;
     var extra = extraSupply(c.count, med.perDay, today, nextEarliest);
     var reminder = !!nextFill && daysBetween(today, nextFill) <= med.reminderDays;
+    var rxExpires = isDate(med.rxWritten) ? addMonths(med.rxWritten, med.rxMonths) : null;
+    var rxExpired = !!rxExpires && rxExpires < today;
+    // A scheduled pickup needs a new prescription when refills run out before it
+    // or when it falls after the prescription expires.
+    var fillNeedsRx = fills.map(function (d, i) {
+      return (med.refillsLeft != null && i >= med.refillsLeft) || (!!rxExpires && d > rxExpires);
+    });
+    var newRx = med.refillsLeft === 0 || rxExpired || (fillNeedsRx.length > 0 && fillNeedsRx[0]);
     var status = "ok";
     if (c.count <= 0 && med.perDay > 0) status = "out";
     else if (extra && extra.pills < 0) status = "shortfall";
     else if (isFinite(days) && days <= med.threshold) status = "low";
-    return { count: c.count, anchorDate: c.anchorDate, days: days, runOut: runOutDate(today, days), fills: fills, nextFill: nextFill, nextEarliest: nextEarliest, extra: extra, reminder: reminder, status: status, pickup: lastPickupDate(med, today) };
+    return { count: c.count, anchorDate: c.anchorDate, days: days, runOut: runOutDate(today, days), fills: fills, nextFill: nextFill, nextEarliest: nextEarliest, extra: extra, reminder: reminder, status: status, pickup: lastPickupDate(med, today), rxExpires: rxExpires, rxExpired: rxExpired, fillNeedsRx: fillNeedsRx, newRx: newRx };
+  }
+
+  function addMonths(s, n) {
+    var p = s.split("-").map(Number);
+    var y = p[0], m = p[1] - 1 + n, d = p[2];
+    var last = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+    return new Date(Date.UTC(y, m, Math.min(d, last))).toISOString().slice(0, 10);
   }
 
   function earliestPickup(med, due, today) {
@@ -564,17 +599,19 @@
       listEl.innerHTML = '<div class="empty"><strong>Nothing tracked yet</strong>Add a medication to start counting pills, projecting when you run out, and planning refills.</div>';
       return;
     }
-    var attention = 0, review = 0;
+    var attention = 0, review = 0, needRx = 0;
     var html = state.meds.map(function (med) {
       var a = analyze(med, today);
       if (a.status !== "ok") attention++;
       if (a.reminder) review++;
+      if (a.newRx) needRx++;
       return renderMed(med, a, today);
     }).join("");
     listEl.innerHTML = html;
     summaryEl.textContent = state.meds.length + (state.meds.length === 1 ? " medication" : " medications") +
       (attention ? ", " + attention + " need" + (attention === 1 ? "s" : "") + " attention" : ", all fine") +
-      (review ? ", " + review + " to check at the pharmacy" : "");
+      (review ? ", " + review + " to check at the pharmacy" : "") +
+      (needRx ? ", " + needRx + (needRx === 1 ? " needs" : " need") + " a new prescription" : "");
   }
 
   function renderMed(med, a, today) {
@@ -594,13 +631,21 @@
       extraHtml = '<div class="stat"><span class="label">Extra at earliest pickup</span><span class="value">No schedule yet</span></div>';
     }
 
+    var rxParts = [];
+    if (med.refillsLeft != null) rxParts.push(med.refillsLeft === 0 ? "No refills left" : med.refillsLeft + (med.refillsLeft === 1 ? " refill left" : " refills left"));
+    if (a.rxExpires) rxParts.push("Written " + fmtDate(med.rxWritten) + ", " + (a.rxExpired ? "expired " : "expires ") + fmtDate(a.rxExpires));
+    var rxHtml = rxParts.length
+      ? '<div class="section"><h3>Prescription</h3><p class="notes' + (a.newRx ? " warn" : "") + '">' + rxParts.join(". ") + "." + (a.newRx ? " Ask the prescriber for a new prescription." : "") + "</p></div>"
+      : "";
+
     var anchorText = "";
     if (a.pickup) {
       anchorText = a.pickup.source === "refill" ? "From refill on " + fmtDate(a.pickup.date) : "From last pickup date, " + fmtDate(a.pickup.date);
     }
     var fillsHtml = a.fills.length
       ? '<div class="fills">' + a.fills.map(function (d, i) {
-          return "<span" + (i === 0 ? ' class="due"' : "") + ">" + windowText(med, d, today) + (d === today ? " (today)" : "") + "</span>";
+          var cls = (i === 0 ? "due" : "") + (a.fillNeedsRx[i] ? " blocked" : "");
+          return "<span" + (cls.trim() ? ' class="' + cls.trim() + '"' : "") + ">" + windowText(med, d, today) + (d === today ? " (today)" : "") + (a.fillNeedsRx[i] ? ", new Rx" : "") + "</span>";
         }).join("") + "</div>" + '<p class="notes anchor">' + anchorText + "</p>"
       : '<p class="notes">Log a refill or set a last pickup date, plus a days supply, to see the schedule.</p>';
 
@@ -621,7 +666,8 @@
     return '<details class="med" data-id="' + med.id + '"' + open + ">" +
       "<summary>" +
         '<h2 class="name">' + esc(med.name) + "</h2>" +
-        '<div class="chips">' + (a.reminder ? '<span class="chip review">Check pharmacy</span>' : "") +
+        '<div class="chips">' + (a.newRx ? '<span class="chip rx">New Rx needed</span>' : "") +
+          (a.reminder ? '<span class="chip review">Check pharmacy</span>' : "") +
           '<span class="status ' + a.status + '">' + statusLabel(a.status) + "</span></div>" +
         '<div class="stats">' +
           '<div class="stat"><span class="label">On hand</span><span class="value">' + fmtNum(a.count) + " pills</span>" +
@@ -635,6 +681,7 @@
       "</summary>" +
       '<div class="body">' +
         (med.notes ? '<div class="section"><h3>Notes</h3><p class="notes">' + esc(med.notes) + "</p></div>" : "") +
+        rxHtml +
         '<div class="section"><h3>Upcoming pickup dates</h3>' + fillsHtml + "</div>" +
         '<div class="section"><h3>Log an entry</h3>' +
           '<form class="entry" data-action="add-entry">' +
@@ -702,6 +749,9 @@
     medForm.elements.threshold.value = med ? med.threshold : 7;
     medForm.elements.earlyDays.value = med ? med.earlyDays : 2;
     medForm.elements.reminderDays.value = med ? med.reminderDays : 4;
+    medForm.elements.refillsLeft.value = med && med.refillsLeft != null ? med.refillsLeft : "";
+    medForm.elements.rxWritten.value = med ? med.rxWritten : "";
+    medForm.elements.rxMonths.value = med ? med.rxMonths : 12;
     medForm.elements.notes.value = med ? med.notes : "";
     medDialog.showModal();
     setTimeout(function () { medForm.elements.name.focus(); }, 0);
@@ -726,6 +776,9 @@
       med.threshold = Math.max(0, Math.floor(Number(f.threshold.value) || 0));
       med.earlyDays = Math.max(0, Math.floor(Number(f.earlyDays.value) || 0));
       med.reminderDays = Math.max(0, Math.floor(Number(f.reminderDays.value) || 0));
+      med.refillsLeft = f.refillsLeft.value === "" ? null : Math.max(0, Math.floor(Number(f.refillsLeft.value) || 0));
+      med.rxWritten = f.rxWritten.value;
+      med.rxMonths = Math.max(1, Math.floor(Number(f.rxMonths.value) || 12));
       med.notes = f.notes.value.trim();
       toast("Medication updated.");
     } else {
@@ -736,6 +789,9 @@
         threshold: Math.max(0, Math.floor(Number(f.threshold.value) || 0)),
         earlyDays: Math.max(0, Math.floor(Number(f.earlyDays.value) || 0)),
         reminderDays: Math.max(0, Math.floor(Number(f.reminderDays.value) || 0)),
+        refillsLeft: f.refillsLeft.value === "" ? null : Math.max(0, Math.floor(Number(f.refillsLeft.value) || 0)),
+        rxWritten: f.rxWritten.value,
+        rxMonths: Math.max(1, Math.floor(Number(f.rxMonths.value) || 12)),
         notes: f.notes.value.trim(),
         entries: [{ id: uid(), type: "recount", qty: startCount, date: todayStr(), note: "Starting count" }]
       };
@@ -781,7 +837,9 @@
     } else if (action === "del-entry") {
       var eid = btn.dataset.entry;
       confirmBox("Delete this entry?", "The current count will be recalculated from the remaining entries.", function () {
+        var removed = med.entries.filter(function (e) { return e.id === eid; })[0];
         med.entries = med.entries.filter(function (e) { return e.id !== eid; });
+        if (removed && removed.type === "refill" && med.refillsLeft != null) med.refillsLeft++;
         save(); render(); toast("Entry deleted.");
       });
     }
@@ -801,6 +859,7 @@
     if (!isDate(date)) { form.elements.date.focus(); toast("Enter a valid date."); return; }
     if (type !== "adjust" && qty < 0) { form.elements.qty.focus(); toast("Quantity cannot be negative for this type."); return; }
     med.entries.push({ id: uid(), type: type, qty: qty, date: date, note: form.elements.note.value.trim() });
+    if (type === "refill" && med.refillsLeft != null && med.refillsLeft > 0) med.refillsLeft--;
     openIds[med.id] = true;
     save(); render();
     toast({ refill: "Refill logged.", recount: "Recount saved.", adjust: "Adjustment logged." }[type]);
