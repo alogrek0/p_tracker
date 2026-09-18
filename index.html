@@ -179,6 +179,7 @@
     .body { border-top: 1px solid var(--line); padding: 14px 16px 16px; display: grid; gap: 16px; }
     .section h3 { margin: 0 0 8px; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
     .notes { margin: 0; color: var(--muted); white-space: pre-wrap; }
+    .notes.anchor { font-size: 0.8rem; margin-top: 8px; }
 
     .fills { display: flex; flex-wrap: wrap; gap: 6px; }
     .fills span { background: var(--accent-soft); color: var(--accent-strong); font-weight: 600; font-size: 0.85rem; padding: 5px 10px; border-radius: 999px; }
@@ -218,6 +219,7 @@
       width: 100%;
     }
     textarea { min-height: 80px; resize: vertical; }
+    label .hint { font-weight: 400; font-size: 0.78rem; line-height: 1.35; }
     input:focus, select:focus, textarea:focus { outline: 3px solid var(--accent); outline-offset: 0; border-color: var(--accent); }
     .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
     .row.end { justify-content: flex-end; }
@@ -320,8 +322,9 @@
       </label>
     </div>
     <div class="grid2">
-      <label>Last pharmacy fill date
+      <label>Last pickup date
         <input name="lastFill" type="date">
+        <span class="hint">Used until you log a refill. After that the latest refill entry sets the schedule.</span>
       </label>
       <label>Days supply per fill
         <input name="daysSupply" type="number" inputmode="numeric" min="1" step="1" value="30">
@@ -477,9 +480,21 @@
     return addDays(today, days);
   }
 
+  // Pickup anchor for the refill schedule: the latest refill entry on or before
+  // today wins; the manual last pickup date is only a fallback before the first refill.
+  function lastPickupDate(med, today) {
+    var list = sortedEntries(med);
+    for (var i = list.length - 1; i >= 0; i--) {
+      if (list[i].type === "refill" && list[i].date <= today) return { date: list[i].date, source: "refill" };
+    }
+    if (isDate(med.lastFill)) return { date: med.lastFill, source: "manual" };
+    return null;
+  }
+
   function nextFillDates(med, today, n) {
-    if (!isDate(med.lastFill) || med.daysSupply <= 0) return [];
-    var d = med.lastFill;
+    var anchor = lastPickupDate(med, today);
+    if (!anchor || med.daysSupply <= 0) return [];
+    var d = anchor.date;
     var guard = 0;
     while (d < today && guard < 5000) { d = addDays(d, med.daysSupply); guard++; }
     var out = [];
@@ -504,7 +519,7 @@
     if (c.count <= 0 && med.perDay > 0) status = "out";
     else if (extra && extra.pills < 0) status = "shortfall";
     else if (isFinite(days) && days <= med.threshold) status = "low";
-    return { count: c.count, anchorDate: c.anchorDate, days: days, runOut: runOutDate(today, days), fills: fills, nextFill: nextFill, extra: extra, status: status };
+    return { count: c.count, anchorDate: c.anchorDate, days: days, runOut: runOutDate(today, days), fills: fills, nextFill: nextFill, extra: extra, status: status, pickup: lastPickupDate(med, today) };
   }
 
   // ---------- Rendering ----------
@@ -543,16 +558,20 @@
       var cls = a.extra.pills < 0 ? "neg" : a.extra.pills > 0 ? "pos" : "";
       var sign = a.extra.pills > 0 ? "+" : "";
       var daysPart = a.extra.days == null ? "" : ' <span class="sub">(' + sign + fmtNum(a.extra.days) + " days)</span>";
-      extraHtml = '<div class="stat"><span class="label">Extra at next fill</span><span class="value ' + cls + '">' + sign + fmtNum(a.extra.pills) + " pills" + daysPart + "</span></div>";
+      extraHtml = '<div class="stat"><span class="label">Extra at next pickup</span><span class="value ' + cls + '">' + sign + fmtNum(a.extra.pills) + " pills" + daysPart + "</span></div>";
     } else {
-      extraHtml = '<div class="stat"><span class="label">Extra at next fill</span><span class="value">Set a fill date</span></div>';
+      extraHtml = '<div class="stat"><span class="label">Extra at next pickup</span><span class="value">No schedule yet</span></div>';
     }
 
+    var anchorText = "";
+    if (a.pickup) {
+      anchorText = a.pickup.source === "refill" ? "From refill on " + fmtDate(a.pickup.date) : "From last pickup date, " + fmtDate(a.pickup.date);
+    }
     var fillsHtml = a.fills.length
       ? '<div class="fills">' + a.fills.map(function (d, i) {
           return "<span" + (i === 0 ? ' class="due"' : "") + ">" + fmtDate(d) + (d === today ? " (today)" : "") + "</span>";
-        }).join("") + "</div>"
-      : '<p class="notes">Add a last fill date and days supply to see the refill schedule.</p>';
+        }).join("") + "</div>" + '<p class="notes anchor">' + anchorText + "</p>"
+      : '<p class="notes">Log a refill or set a last pickup date, plus a days supply, to see the schedule.</p>';
 
     var entries = sortedEntries(med).slice().reverse();
     var entriesHtml = entries.length
@@ -577,18 +596,18 @@
             '<span class="sub">' + fmtNum(med.perDay) + " per day</span></div>" +
           '<div class="stat"><span class="label">Days left</span><span class="value">' + daysText + "</span>" +
             '<span class="sub">Runs out ' + runOutText + "</span></div>" +
-          '<div class="stat"><span class="label">Next fill</span><span class="value">' + fillText + "</span>" +
+          '<div class="stat"><span class="label">Next pickup</span><span class="value">' + fillText + "</span>" +
             (med.daysSupply ? '<span class="sub">Every ' + med.daysSupply + " days</span>" : "") + "</div>" +
           extraHtml +
         "</div>" +
       "</summary>" +
       '<div class="body">' +
         (med.notes ? '<div class="section"><h3>Notes</h3><p class="notes">' + esc(med.notes) + "</p></div>" : "") +
-        '<div class="section"><h3>Upcoming fill dates</h3>' + fillsHtml + "</div>" +
+        '<div class="section"><h3>Upcoming pickup dates</h3>' + fillsHtml + "</div>" +
         '<div class="section"><h3>Log an entry</h3>' +
           '<form class="entry" data-action="add-entry">' +
             "<label>Type<select name=\"type\">" +
-              '<option value="refill">Refill (add pills)</option>' +
+              '<option value="refill">Refill (picked up pills)</option>' +
               '<option value="recount">Recount (set total)</option>' +
               '<option value="adjust">Adjust (plus or minus)</option>' +
             "</select></label>" +

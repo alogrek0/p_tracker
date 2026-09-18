@@ -4,9 +4,9 @@ A small personal medication supply ledger that runs entirely in your browser. It
 
 ## What it does
 
-For each medication you record the name, how many pills you take per day, the last date the pharmacy filled it, and how many days each fill covers. From there the app keeps a ledger of entries:
+For each medication you record the name, how many pills you take per day, and how many days each pharmacy fill covers. You can also enter a last pickup date to start the schedule before you have logged any refills. From there the app keeps a ledger of entries:
 
-- **Refill** adds pills you picked up.
+- **Refill** adds pills you picked up. The date of the latest refill also anchors the pickup schedule.
 - **Recount** sets the total to what you actually counted on a given date.
 - **Adjust** adds or removes a few pills for missed or extra doses.
 
@@ -14,8 +14,8 @@ The current count is derived from the ledger: the latest recount, plus later ref
 
 - Pills on hand and days left at the current dose.
 - The projected run out date.
-- The next four pharmacy fill dates, calculated from the last fill date and the days supply.
-- Extra supply at the next fill: how many pills (and days) you will have left over when the next fill is due, or how short you will be if the number is negative.
+- The next four pharmacy pickup dates, calculated from the date of your latest refill entry plus the days supply. Pharmacies count from the day you picked up the prescription, so the refill entry is the anchor. The manual last pickup date is only used until the first refill is logged.
+- Extra supply at the next pickup: how many pills (and days) you will have left over when the next pickup is due, or how short you will be if the number is negative.
 - A status of OK, Low, Shortfall, or Out. Low uses the per medication warning threshold in days.
 
 The page installs to your home screen, follows your system light or dark setting, and works with no network after the first visit.
