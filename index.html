@@ -178,6 +178,9 @@
     .dosebar .today { font-size: 0.8rem; color: var(--muted); margin-right: 4px; }
     .dosebar button { min-height: 38px; padding: 6px 12px; font-size: 0.9rem; box-shadow: none; border-radius: 999px; }
     .dosebar button.taken { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .dosebar button.qty { min-width: 48px; font-variant-numeric: tabular-nums; }
+    .dosebar button.qty:first-of-type { margin-left: 0; }
+    .dosebar .sep { width: 1px; height: 24px; background: var(--line); }
     @media (prefers-color-scheme: dark) { .dosebar button.taken { color: #06201A; } }
     .switch { flex-direction: row; align-items: center; gap: 10px; }
     .switch input { width: 22px; height: 22px; min-height: 0; margin: 0; }
@@ -676,15 +679,18 @@
     }
 
     var doseBar = "";
-    if (med.trackDoses && med.slots.length) {
+    if (med.trackDoses) {
       var todayDoses = med.entries.filter(function (e) { return e.type === "dose" && e.date === today; });
       var takenToday = todayDoses.reduce(function (s, e) { return s + e.qty; }, 0);
       var planned = med.slots.reduce(function (s, x) { return s + x.qty; }, 0);
-      doseBar = '<div class="dosebar"><span class="today">Today ' + fmtNum(takenToday) + " of " + fmtNum(planned) + "</span>" +
+      doseBar = '<div class="dosebar"><span class="today">Today ' + fmtNum(takenToday) + (planned ? " of " + fmtNum(planned) : "") + "</span>" +
         med.slots.map(function (s) {
           var done = todayDoses.some(function (e) { return e.slot === s.label; });
           return '<button type="button" class="' + (done ? "taken" : "") + '" data-action="dose" data-slot="' + esc(s.label) + '" data-qty="' + s.qty + '" aria-pressed="' + done + '">' +
             esc(s.label) + " " + fmtNum(s.qty) + (done ? " taken" : "") + "</button>";
+        }).join("") +
+        [0.5, 1, 1.5].map(function (q) {
+          return '<button type="button" class="qty" data-action="dose-qty" data-qty="' + q + '" aria-label="Log ' + pillWord(q) + '">' + (q === 0.5 ? "1/2" : fmtNum(q)) + "</button>";
         }).join("") + "</div>";
     }
 
@@ -776,16 +782,28 @@
     b.addEventListener("click", function () { b.closest("dialog").close(); });
   });
 
-  function confirmBox(title, text, cb) {
+  function confirmBox(title, text, cb, okLabel) {
     document.getElementById("confirm-title").textContent = title;
     document.getElementById("confirm-text").textContent = text;
+    document.getElementById("confirm-ok").textContent = okLabel || "Confirm";
     confirmCb = cb;
     confirmDialog.showModal();
   }
   document.getElementById("confirm-ok").addEventListener("click", function () {
+    if (!confirmDialog.open) { confirmCb = null; return; }
+    var cb = confirmCb;
+    confirmCb = null;
     confirmDialog.close();
-    if (confirmCb) { var cb = confirmCb; confirmCb = null; cb(); }
+    if (cb) cb();
   });
+  // Any other way of closing (Cancel, Escape, backdrop) discards the pending action.
+  confirmDialog.addEventListener("close", function () { confirmCb = null; });
+  confirmDialog.addEventListener("click", function (ev) { if (ev.target === confirmDialog) confirmDialog.close(); });
+
+  function pillWord(n) {
+    if (n === 0.5) return "half a pill";
+    return fmtNum(n) + (n === 1 ? " pill" : " pills");
+  }
 
   var toastTimer = null;
   function toast(msg) {
@@ -904,18 +922,28 @@
     if (!med) return;
     var action = btn.dataset.action;
     if (action === "dose") {
-      ev.preventDefault();
       var today = todayStr();
       var slot = btn.dataset.slot;
+      var slotQty = Number(btn.dataset.qty) || 0;
       var existing = med.entries.filter(function (e) { return e.type === "dose" && e.date === today && e.slot === slot; })[0];
       if (existing) {
-        med.entries = med.entries.filter(function (e) { return e.id !== existing.id; });
-        toast(slot + " dose removed.");
+        confirmBox("Remove today's " + slot + " dose?", med.name + ": " + pillWord(existing.qty) + " will be added back to the count.", function () {
+          med.entries = med.entries.filter(function (e) { return e.id !== existing.id; });
+          save(); render(); toast(slot + " dose removed.");
+        }, "OK");
       } else {
-        med.entries.push({ id: uid(), type: "dose", qty: Number(btn.dataset.qty) || 0, date: today, note: "", slot: slot });
-        toast(slot + " dose logged.");
+        confirmBox("Log " + slot + " dose?", med.name + ": " + pillWord(slotQty) + ".", function () {
+          med.entries.push({ id: uid(), type: "dose", qty: slotQty, date: today, note: "", slot: slot });
+          save(); render(); toast(slot + " dose logged.");
+        }, "OK");
       }
-      save(); render();
+    } else if (action === "dose-qty") {
+      var qtyToday = todayStr();
+      var q = Number(btn.dataset.qty) || 0;
+      confirmBox("Log " + pillWord(q) + "?", med.name + ", today.", function () {
+        med.entries.push({ id: uid(), type: "dose", qty: q, date: qtyToday, note: "", slot: "" });
+        save(); render(); toast("Logged " + pillWord(q) + ".");
+      }, "OK");
     } else if (action === "edit") {
       openMedDialog(med);
     } else if (action === "delete") {
