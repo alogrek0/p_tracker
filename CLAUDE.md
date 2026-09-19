@@ -8,8 +8,12 @@ Storage key is pill-ledger-v1; do not change it.
 - No em dashes, en dashes, or hyphens as punctuation in UI copy or docs.
   Scan with Python; Git Bash grep cannot match \x{2014}.
 - Inter is the chosen font. The design hook ignore is in .impeccable/config.json.
-- Fewest taps for daily actions. Home shows name, pills and days left, dose
-  buttons, and one status sentence. Everything else lives on the detail screen.
+- Fewest taps for daily actions. Home shows name, then a stat row of pills, days
+  left, and surplus, then dose buttons, then one status sentence. Everything else
+  lives on the detail screen.
+- Surplus is the spare pills at the earliest pickup date. Home shows it only when
+  positive; a shortfall is left to the status sentence, which already names it.
+  Call it surplus everywhere, on home and on the detail screen.
 - Dose taps log at once with an Undo toast. OK confirmation only for removing
   a dose, deleting a medication, and restoring a backup.
 - Pickup schedule anchors on the latest refill entry date. The manual last

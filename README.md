@@ -21,14 +21,14 @@ The current count is derived from the ledger: the latest recount, plus later ref
 - A pickup window for each date. Pharmacies usually let you collect a refill a couple of days early, so each medication has an early pickup setting (default 2 days) and the schedule shows "Oct 8 to Oct 10" style windows. Set it to 0 or 1 for controlled medications with stricter rules.
 - A reminder chip. Each medication has a reminder setting (default 4 days before the due date). When the due date is that close, the card shows a Check pharmacy chip and the summary line counts it, so you know to review the pharmacy app.
 - Prescription tracking. Optionally enter refills remaining, the date the prescription was written, and how many months it is valid for (12 by default, 6 for Schedule III and IV). Logging a refill counts one refill down, and deleting a refill entry puts it back. When refills reach zero, the prescription has expired, or an upcoming pickup falls outside either limit, the card shows a New Rx needed chip, the affected dates are marked, and the summary line counts it.
-- Extra supply at the earliest pickup: how many pills (and days) you will have left over on the first day you can collect the next fill, or how short you will be if the number is negative.
+- Surplus at the earliest pickup: how many pills (and days) you will have left over on the first day you can collect the next fill, or how short you will be if the number is negative. This is the figure the home card shows as "surplus".
 - A status of OK, Low, Shortfall, or Out. Low uses the per medication warning threshold in days.
 
 The page installs to your home screen, follows your system light or dark setting, and works with no network after the first visit.
 
 ## Using the app
 
-- **Home** lists your medications. Each card shows the name, pills on hand, days left, the dose buttons if dose logging is on, and one status sentence such as "Next pickup Sep 29 to Oct 1, 2026" or "Running low, 5 days left".
+- **Home** lists your medications. Each card shows the name, then a row of three figures: pills on hand, days left, and your surplus at the next pickup. Surplus appears only when it is positive, because a shortfall is already spelled out in the status sentence. Below that come the dose buttons if dose logging is on, and one status sentence such as "Next pickup Sep 29 to Oct 1, 2026" or "Running low, 5 days left".
 - **Tap a card** to open its detail screen: supply numbers, the pickup schedule, prescription status, the entry form for refills, recounts, adjustments, and back dated doses, and the full history. Edit and Delete live there too.
 - **Add** in the top bar creates a medication. The form shows the basics first; pharmacy dates, reminders, refills, and prescription details are under More settings.
 - **Menu** (the three dots) holds Copy backup and Paste backup.

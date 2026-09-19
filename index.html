@@ -127,6 +127,11 @@
     .card .open .txt { flex: 1; min-width: 0; }
     .card .open .name { display: block; font-weight: 700; font-size: 1.1rem; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .card .open .sub { display: block; color: var(--muted); font-size: 0.9rem; font-weight: 500; }
+    .card .open .cstats { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 2px; }
+    .card .open .cstat { display: flex; flex-direction: column; min-width: 0; }
+    .card .open .cval { font-size: 1.35rem; font-weight: 700; line-height: 1.2; font-variant-numeric: tabular-nums; }
+    .card .open .cval.pos { color: var(--accent); }
+    .card .open .clabel { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; }
     .card .open svg { width: 20px; height: 20px; color: var(--muted); flex: none; }
     .card .open:focus-visible { outline: 3px solid var(--accent); outline-offset: -3px; border-radius: var(--radius) var(--radius) 0 0; }
     .doses { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 16px 12px; align-items: center; }
@@ -624,11 +629,20 @@
     screenEl.innerHTML = state.meds.map(function (med) { return renderCard(med, analyze(med, today), today); }).join("");
   }
 
+  // One stat cell for the home card head.
+  function cardStat(value, label, cls) {
+    return '<span class="cstat"><span class="cval ' + cls + '">' + value + '</span><span class="clabel">' + label + "</span></span>";
+  }
+
   function renderCard(med, a, today) {
-    var sub = fmtNum(a.count) + " pills";
-    if (med.perDay <= 0) sub += ", no daily dose set";
-    else if (a.count <= 0 && a.nextFill) sub += ", pickup " + windowText(med, a.nextFill, today);
-    else if (isFinite(a.days)) sub += ", " + a.days + (a.days === 1 ? " day" : " days") + " left";
+    var cells = [cardStat(fmtNum(a.count), "pills", "")];
+    if (isFinite(a.days)) cells.push(cardStat(String(a.days), a.days === 1 ? "day left" : "days left", ""));
+    // Surplus needs a daily dose to mean anything; without one it just restates the count.
+    if (med.perDay > 0 && a.extra && a.extra.pills > 0) cells.push(cardStat("+" + fmtNum(a.extra.pills), "surplus", "pos"));
+    var head = '<span class="cstats">' + cells.join("") + "</span>";
+    if (med.perDay <= 0) head += '<span class="sub">No daily dose set</span>';
+    // Out of pills is the one state with no number worth reading, so give it the pickup window.
+    else if (a.count <= 0 && a.nextFill) head += '<span class="sub">Pickup ' + windowText(med, a.nextFill, today) + "</span>";
     var st = statusLine(med, a, today);
     var doses = "";
     if (med.trackDoses) {
@@ -647,7 +661,7 @@
     }
     return '<article class="card" data-id="' + med.id + '" aria-labelledby="name-' + med.id + '">' +
       '<button type="button" class="open" data-action="open">' +
-        '<span class="txt"><span class="name" id="name-' + med.id + '">' + esc(med.name) + '</span><span class="sub">' + sub + "</span></span>" + CHEVRON +
+        '<span class="txt"><span class="name" id="name-' + med.id + '">' + esc(med.name) + "</span>" + head + "</span>" + CHEVRON +
       "</button>" +
       doses +
       '<div class="status ' + st.level + '">' + st.text + "</div>" +
@@ -675,7 +689,7 @@
     var supply = '<div class="panel"><h3>Supply</h3><div class="stats">' +
       '<div class="stat"><span class="label">On hand</span><span class="value hero">' + fmtNum(a.count) + ' pills</span><span class="sub">' + fmtNum(med.perDay) + " per day" + (med.trackDoses ? ", dose logging on" : "") + "</span></div>" +
       '<div class="stat"><span class="label">Days left</span><span class="value hero">' + daysText + '</span><span class="sub">Runs out ' + (a.runOut ? fmtDate(a.runOut) : "n/a") + "</span></div>" +
-      '<div class="stat"><span class="label">Spare at next pickup</span>' + extraHtml + "</div>" +
+      '<div class="stat"><span class="label">Surplus at next pickup</span>' + extraHtml + "</div>" +
       "</div></div>";
 
     var st = statusLine(med, a, today);
