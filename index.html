@@ -287,7 +287,7 @@
     </label>
     <label class="switch">
       <input name="trackDoses" type="checkbox">
-      <span>Log each dose with AM and PM buttons. Pills per day then comes from the dose amounts.</span>
+      <span>Log each dose with AM and PM buttons. The count then drops only by what you log.</span>
     </label>
     <div id="slots-block" class="hidden">
       <span class="hint">Dose buttons. Leave a label blank to skip it.</span>
@@ -303,6 +303,7 @@
     <div class="grid2">
       <label id="per-day-label">Pills per day
         <input name="perDay" type="number" inputmode="decimal" min="0" step="0.25" value="1">
+        <span class="hint hidden" id="per-day-hint">Planned rate for days left and surplus. Blank uses the dose button total.</span>
       </label>
       <label id="start-count-label">Pills on hand today
         <input name="startCount" type="number" inputmode="decimal" min="0" step="0.5" value="0">
@@ -872,7 +873,7 @@
   function syncFormVisibility() {
     var on = medForm.elements.trackDoses.checked;
     document.getElementById("slots-block").classList.toggle("hidden", !on);
-    document.getElementById("per-day-label").classList.toggle("hidden", on);
+    document.getElementById("per-day-hint").classList.toggle("hidden", !on);
   }
   medForm.elements.trackDoses.addEventListener("change", syncFormVisibility);
 
@@ -913,8 +914,10 @@
     var f = medForm.elements;
     var name = f.name.value.trim();
     if (!name) { fieldError(f.name, "Give the medication a name."); return; }
-    var perDay = Number(f.perDay.value);
+    var perDayRaw = f.perDay.value.trim();
+    var perDay = Number(perDayRaw);
     if (!(perDay >= 0)) { fieldError(f.perDay, "Pills per day must be zero or more."); return; }
+    if (perDayRaw === "" && !f.trackDoses.checked) { fieldError(f.perDay, "Enter pills per day."); return; }
     var lastFill = f.lastFill.value;
     if (lastFill && !isDate(lastFill)) { fieldError(f.lastFill, "Enter a full date."); return; }
     var slots = [];
@@ -924,7 +927,7 @@
     }
     var trackDoses = f.trackDoses.checked;
     var slotTotal = slots.reduce(function (s, x) { return s + x.qty; }, 0);
-    if (trackDoses && slotTotal > 0) perDay = slotTotal;
+    if (trackDoses && perDayRaw === "") perDay = slotTotal;
     var id = f.id.value;
     var med = id ? findMed(id) : null;
     var common = {
