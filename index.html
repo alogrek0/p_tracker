@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#f6f6f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#111215" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Pills">
+<meta name="description" content="Personal pill ledger. Log each dose and see the running surplus.">
+<title>Pill ledger</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<div class="app" id="app" data-mode="ready">
+
+  <header class="appbar" id="appbar">
+    <h1 class="appbar__title">Pill ledger</h1>
+    <p class="appbar__date" id="today-label"></p>
+  </header>
+
+  <div class="banners" id="banner-region" role="status" aria-live="polite" aria-atomic="false"></div>
+
+  <main class="main" id="main">
+
+    <!-- ===================== SETUP, first run only ===================== -->
+    <section class="view view--setup" id="view-setup" aria-labelledby="setup-title" hidden>
+      <h2 class="view__title" id="setup-title">First run</h2>
+      <form class="card form" id="setup-form" novalidate>
+
+        <fieldset class="setup__step" id="setup-step-1" data-step="1">
+          <legend class="setup__legend">Step 1 of 3. Count the bottle</legend>
+          <p class="hint">Tip every pill out and count them. A half counts as 0.5.</p>
+          <div class="field">
+            <label class="field__label" for="setup-count">Pills in the bottle now</label>
+            <input class="field__input" id="setup-count" name="count" type="number" inputmode="decimal" step="0.5" min="0" value="40" required>
+          </div>
+        </fieldset>
+
+        <fieldset class="setup__step" id="setup-step-2" data-step="2" hidden>
+          <legend class="setup__legend">Step 2 of 3. Your standing plan</legend>
+          <p class="hint">What you intend to take each day. Logging a dose never changes this.</p>
+          <div class="field">
+            <label class="field__label" for="setup-plan-am">Morning plan</label>
+            <input class="field__input" id="setup-plan-am" name="planAm" type="number" inputmode="decimal" step="0.5" min="0" value="1" required>
+          </div>
+          <div class="field">
+            <label class="field__label" for="setup-plan-pm">Evening plan</label>
+            <input class="field__input" id="setup-plan-pm" name="planPm" type="number" inputmode="decimal" step="0.5" min="0" value="1" required>
+          </div>
+        </fieldset>
+
+        <fieldset class="setup__step" id="setup-step-3" data-step="3" hidden>
+          <legend class="setup__legend">Step 3 of 3. Confirm the prescribed rate</legend>
+          <p class="hint">The rate your prescription assumes. Surplus is measured against it.</p>
+          <div class="field">
+            <label class="field__label" for="setup-prescribed">Prescribed pills per day</label>
+            <input class="field__input" id="setup-prescribed" name="prescribedPerDay" type="number" inputmode="decimal" step="0.5" min="0" value="2" required>
+          </div>
+        </fieldset>
+
+        <p class="form__error" id="setup-error" role="alert" hidden></p>
+
+        <div class="form__actions">
+          <button class="btn btn--ghost" id="setup-back" type="button" data-action="setup-back" hidden>Back</button>
+          <button class="btn btn--primary" id="setup-next" type="button" data-action="setup-next">Next</button>
+          <button class="btn btn--primary" id="setup-finish" type="submit" data-action="setup-finish" hidden>Start tracking</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- ===================== HOME ===================== -->
+    <section class="view" id="view-home" role="tabpanel" aria-labelledby="tab-home" tabindex="-1">
+      <h2 class="view__title visually-hidden">Today</h2>
+
+      <div class="slots">
+
+        <article class="slot" id="slot-am" data-slot="am" data-logged="false">
+          <header class="slot__head">
+            <h3 class="slot__title" id="slot-am-title">Morning</h3>
+            <p class="slot__plan" id="slot-am-plan"></p>
+          </header>
+          <p class="slot__status" id="slot-am-status">Not logged yet</p>
+
+          <div class="slot__open" id="slot-am-open">
+            <div class="doses" id="slot-am-doses" role="group" aria-labelledby="slot-am-title">
+              <button class="dose" type="button" data-action="log-dose" data-slot="am" data-qty="0.5" aria-label="Log 0.5 pills this morning">0.5</button>
+              <button class="dose" type="button" data-action="log-dose" data-slot="am" data-qty="1" aria-label="Log 1 pill this morning">1</button>
+              <button class="dose" type="button" data-action="log-dose" data-slot="am" data-qty="1.5" aria-label="Log 1.5 pills this morning">1.5</button>
+            </div>
+            <button class="skip" id="slot-am-skip" type="button" data-action="log-dose" data-slot="am" data-qty="0" aria-label="Record the morning dose as skipped">Skipped</button>
+          </div>
+
+          <div class="slot__done" id="slot-am-done" hidden>
+            <p class="slot__taken" id="slot-am-taken"></p>
+            <button class="btn btn--ghost btn--small" id="slot-am-undo" type="button" data-action="undo-dose" data-slot="am">Undo</button>
+          </div>
+        </article>
+
+        <article class="slot" id="slot-pm" data-slot="pm" data-logged="false">
+          <header class="slot__head">
+            <h3 class="slot__title" id="slot-pm-title">Evening</h3>
+            <p class="slot__plan" id="slot-pm-plan"></p>
+          </header>
+          <p class="slot__status" id="slot-pm-status">Not logged yet</p>
+
+          <div class="slot__open" id="slot-pm-open">
+            <div class="doses" id="slot-pm-doses" role="group" aria-labelledby="slot-pm-title">
+              <button class="dose" type="button" data-action="log-dose" data-slot="pm" data-qty="0.5" aria-label="Log 0.5 pills this evening">0.5</button>
+              <button class="dose" type="button" data-action="log-dose" data-slot="pm" data-qty="1" aria-label="Log 1 pill this evening">1</button>
+              <button class="dose" type="button" data-action="log-dose" data-slot="pm" data-qty="1.5" aria-label="Log 1.5 pills this evening">1.5</button>
+            </div>
+            <button class="skip" id="slot-pm-skip" type="button" data-action="log-dose" data-slot="pm" data-qty="0" aria-label="Record the evening dose as skipped">Skipped</button>
+          </div>
+
+          <div class="slot__done" id="slot-pm-done" hidden>
+            <p class="slot__taken" id="slot-pm-taken"></p>
+            <button class="btn btn--ghost btn--small" id="slot-pm-undo" type="button" data-action="undo-dose" data-slot="pm">Undo</button>
+          </div>
+        </article>
+
+      </div>
+
+      <h3 class="visually-hidden">Where you stand</h3>
+      <div class="stats" id="stats">
+        <div class="stat stat--headline" id="stat-surplus" data-sign="zero">
+          <p class="stat__label" id="stat-surplus-label">Surplus</p>
+          <p class="stat__value" id="stat-surplus-value" aria-describedby="stat-surplus-label">0</p>
+          <p class="stat__unit" id="stat-surplus-unit">pills ahead</p>
+          <p class="stat__note" id="stat-surplus-note" hidden></p>
+        </div>
+        <div class="stat" id="stat-balance">
+          <p class="stat__label" id="stat-balance-label">On hand</p>
+          <p class="stat__value stat__value--small" id="stat-balance-value" aria-describedby="stat-balance-label">0</p>
+        </div>
+        <div class="stat" id="stat-runout">
+          <p class="stat__label" id="stat-runout-label">Runs out</p>
+          <p class="stat__value stat__value--small" id="stat-runout-value" aria-describedby="stat-runout-label"></p>
+          <p class="stat__note" id="stat-runout-note" hidden></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== HISTORY ===================== -->
+    <section class="view" id="view-history" role="tabpanel" aria-labelledby="tab-history" tabindex="-1" hidden>
+      <div class="view__head">
+        <h2 class="view__title">History</h2>
+        <button class="btn btn--ghost btn--small" id="history-add" type="button" data-action="add-entry">Add entry</button>
+      </div>
+      <p class="empty" id="history-empty" hidden>Nothing logged yet.</p>
+      <ol class="entries" id="history-list"></ol>
+    </section>
+
+    <!-- ===================== ACTIONS ===================== -->
+    <section class="view" id="view-actions" role="tabpanel" aria-labelledby="tab-actions" tabindex="-1" hidden>
+      <h2 class="view__title">Actions</h2>
+
+      <form class="card form" id="fill-form" novalidate>
+        <h3 class="card__title">Record a refill</h3>
+        <div class="field">
+          <label class="field__label" for="fill-qty">Pills picked up</label>
+          <input class="field__input" id="fill-qty" name="qty" type="number" inputmode="decimal" step="0.5" min="0" required>
+        </div>
+        <div class="field">
+          <label class="field__label" for="fill-date">Date</label>
+          <input class="field__input" id="fill-date" name="date" type="date" required>
+        </div>
+        <div class="form__actions">
+          <button class="btn btn--primary" id="fill-save" type="submit">Save refill</button>
+        </div>
+      </form>
+
+      <form class="card form" id="recount-form" novalidate>
+        <h3 class="card__title">Recount the bottle</h3>
+        <p class="hint">Anything missing appears in history as unaccounted.</p>
+        <div class="field">
+          <label class="field__label" for="recount-qty">Pills counted</label>
+          <input class="field__input" id="recount-qty" name="qty" type="number" inputmode="decimal" step="0.5" min="0" required>
+        </div>
+        <div class="field">
+          <label class="field__label" for="recount-date">Date</label>
+          <input class="field__input" id="recount-date" name="date" type="date" required>
+        </div>
+        <div class="form__actions">
+          <button class="btn btn--primary" id="recount-save" type="submit">Save recount</button>
+        </div>
+      </form>
+
+      <section class="card" aria-labelledby="backup-title">
+        <h3 class="card__title" id="backup-title">Backup</h3>
+        <p class="hint" id="export-last"></p>
+        <div class="form__actions">
+          <button class="btn btn--primary" id="export-btn" type="button" data-action="export">Export backup</button>
+        </div>
+        <div class="field">
+          <label class="field__label" for="import-file">Import a backup file</label>
+          <input class="field__input field__input--file" id="import-file" type="file" accept="application/json,.json">
+        </div>
+        <p class="hint">Importing replaces everything stored now.</p>
+        <div class="form__actions">
+          <button class="btn btn--danger" id="import-btn" type="button" data-action="import">Replace from file</button>
+        </div>
+      </section>
+
+      <p class="form__status" id="actions-status" role="status" aria-live="polite" hidden></p>
+    </section>
+
+    <!-- ===================== SETTINGS ===================== -->
+    <section class="view" id="view-settings" role="tabpanel" aria-labelledby="tab-settings" tabindex="-1" hidden>
+      <h2 class="view__title">Settings</h2>
+
+      <form class="card form" id="settings-form" novalidate>
+        <p class="hint">Saving writes a dated change. Past days keep the values that were in force then.</p>
+
+        <div class="field">
+          <label class="field__label" for="settings-prescribed">Prescribed pills per day</label>
+          <input class="field__input" id="settings-prescribed" name="prescribedPerDay" type="number" inputmode="decimal" step="0.5" min="0" required>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="settings-plan-am">Morning plan</label>
+          <input class="field__input" id="settings-plan-am" name="planAm" type="number" inputmode="decimal" step="0.5" min="0" required>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="settings-plan-pm">Evening plan</label>
+          <input class="field__input" id="settings-plan-pm" name="planPm" type="number" inputmode="decimal" step="0.5" min="0" required>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="settings-low-days">Warn when fewer days remain than</label>
+          <input class="field__input" id="settings-low-days" name="lowBalanceDays" type="number" inputmode="numeric" step="1" min="0" required>
+        </div>
+
+        <p class="form__error" id="settings-error" role="alert" hidden></p>
+
+        <div class="form__actions">
+          <button class="btn btn--primary" id="settings-save" type="submit">Save settings</button>
+        </div>
+      </form>
+
+      <p class="form__status" id="settings-status" role="status" aria-live="polite" hidden></p>
+      <p class="hint" id="app-version"></p>
+    </section>
+
+  </main>
+
+  <nav class="tabbar" id="tabbar" aria-label="Views">
+    <div class="tabbar__inner" role="tablist" aria-label="Views">
+      <button class="tab" id="tab-home" type="button" role="tab" data-action="show-view" data-view="home" aria-controls="view-home" aria-selected="true">Home</button>
+      <button class="tab" id="tab-history" type="button" role="tab" data-action="show-view" data-view="history" aria-controls="view-history" aria-selected="false" tabindex="-1">History</button>
+      <button class="tab" id="tab-actions" type="button" role="tab" data-action="show-view" data-view="actions" aria-controls="view-actions" aria-selected="false" tabindex="-1">Actions</button>
+      <button class="tab" id="tab-settings" type="button" role="tab" data-action="show-view" data-view="settings" aria-controls="view-settings" aria-selected="false" tabindex="-1">Settings</button>
+    </div>
+  </nav>
+
+</div>
+
+<!-- ===================== ENTRY EDITOR ===================== -->
+<dialog class="dialog" id="entry-dialog" aria-labelledby="entry-dialog-title">
+  <form class="form" id="entry-form" method="dialog" novalidate>
+    <h2 class="dialog__title" id="entry-dialog-title">Edit entry</h2>
+    <input type="hidden" id="entry-id" name="id" value="">
+
+    <div class="field">
+      <label class="field__label" for="entry-type">Kind</label>
+      <select class="field__input" id="entry-type" name="type" required>
+        <option value="dose">Dose</option>
+        <option value="fill">Refill</option>
+        <option value="recount">Recount</option>
+        <option value="setup">Setup count</option>
+        <option value="settings">Settings change</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label class="field__label" for="entry-date">Date</label>
+      <input class="field__input" id="entry-date" name="date" type="date" required>
+    </div>
+
+    <div class="field" id="entry-slot-field">
+      <label class="field__label" for="entry-slot">Slot</label>
+      <select class="field__input" id="entry-slot" name="slot">
+        <option value="am">Morning</option>
+        <option value="pm">Evening</option>
+      </select>
+    </div>
+
+    <div class="field" id="entry-qty-field">
+      <label class="field__label" for="entry-qty">Pills</label>
+      <input class="field__input" id="entry-qty" name="qty" type="number" inputmode="decimal" step="0.5" min="0">
+    </div>
+
+    <div class="field" id="entry-prescribed-field" hidden>
+      <label class="field__label" for="entry-prescribed">Prescribed pills per day</label>
+      <input class="field__input" id="entry-prescribed" name="prescribedPerDay" type="number" inputmode="decimal" step="0.5" min="0">
+    </div>
+
+    <div class="field" id="entry-plan-am-field" hidden>
+      <label class="field__label" for="entry-plan-am">Morning plan</label>
+      <input class="field__input" id="entry-plan-am" name="planAm" type="number" inputmode="decimal" step="0.5" min="0">
+    </div>
+
+    <div class="field" id="entry-plan-pm-field" hidden>
+      <label class="field__label" for="entry-plan-pm">Evening plan</label>
+      <input class="field__input" id="entry-plan-pm" name="planPm" type="number" inputmode="decimal" step="0.5" min="0">
+    </div>
+
+    <p class="form__error" id="entry-error" role="alert" hidden></p>
+
+    <div class="form__actions form__actions--spread">
+      <button class="btn btn--danger btn--small" id="entry-delete" type="button" data-action="delete-entry" hidden>Delete</button>
+      <span class="form__spacer"></span>
+      <button class="btn btn--ghost" id="entry-cancel" type="button" data-action="cancel-entry">Cancel</button>
+      <button class="btn btn--primary" id="entry-save" type="submit" data-action="save-entry">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- ===================== TEMPLATES ===================== -->
+<template id="tpl-banner">
+  <div class="banner" data-severity="info">
+    <p class="banner__text"></p>
+    <button class="banner__action btn btn--small" type="button" hidden></button>
+    <button class="banner__dismiss" type="button" aria-label="Dismiss this notice">Dismiss</button>
+  </div>
+</template>
+
+<template id="tpl-entry-row">
+  <li class="entry" data-kind="dose">
+    <div class="entry__body">
+      <p class="entry__date"></p>
+      <p class="entry__title"><span class="entry__badge"></span><span class="entry__label"></span></p>
+      <p class="entry__detail"></p>
+      <p class="entry__gap" hidden></p>
+    </div>
+    <p class="entry__qty"></p>
+    <div class="entry__controls">
+      <button class="btn btn--ghost btn--small entry__edit" type="button" data-action="edit-entry">Edit</button>
+      <button class="btn btn--ghost btn--small entry__delete" type="button" data-action="delete-entry">Delete</button>
+    </div>
+  </li>
+</template>
+
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>

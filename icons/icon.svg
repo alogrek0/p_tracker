@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="p_tracker">
+  <rect width="512" height="512" rx="112" ry="112" fill="#236E6B"/>
+  <g transform="rotate(-45 256 256)">
+    <path d="M 251.50 178.00 H 164.00 A 78.00 78.00 0 0 0 164.00 334.00 H 251.50 Z" fill="#FFFFFF"/>
+    <path d="M 260.50 178.00 H 348.00 A 78.00 78.00 0 0 1 348.00 334.00 H 260.50 Z" fill="#9FD6D2"/>
+  </g>
+</svg>
