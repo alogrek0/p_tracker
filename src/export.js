@@ -36,7 +36,7 @@ const DEFAULT_LOW_BALANCE_DAYS = 7;
  * these, sorted, rather than dropped: a backup that silently loses a field is
  * worse than one that is a little verbose.
  */
-const ENTRY_KEY_ORDER = ["id", "seq", "type", "date", "slot", "qty", "prescribedPerDay", "plan", "note"];
+const ENTRY_KEY_ORDER = ["id", "seq", "type", "date", "slot", "qty", "pills", "prescribedPerDay", "plan", "note"];
 const PLAN_KEY_ORDER = ["am", "pm"];
 
 // ---------------------------------------------------------------------------
@@ -230,6 +230,7 @@ export function importJSON(text) {
     const seqs = new Set();
     const doseSlots = new Set();
     let setupCount = 0;
+    let openingCount = 0;
     let maxSeq = -1;
 
     parsed.entries.forEach((e, i) => {
@@ -249,6 +250,7 @@ export function importJSON(text) {
       seqs.add(e.seq);
       if (e.seq > maxSeq) maxSeq = e.seq;
       if (e.type === "setup") setupCount += 1;
+      if (e.type === "opening") openingCount += 1;
       if (e.type === "dose") {
         const key = `${e.date}/${e.slot}`;
         if (doseSlots.has(key)) {
@@ -258,6 +260,9 @@ export function importJSON(text) {
       }
     });
 
+    if (openingCount > 1) {
+      errors.push(`this backup has ${openingCount} opening entries; a ledger has at most one`);
+    }
     if (setupCount > 1) {
       errors.push(`this backup has ${setupCount} setup entries; a ledger has at most one`);
     }

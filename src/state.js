@@ -120,6 +120,7 @@ function validateState(s) {
   const seqs = new Set();
   const doseSlots = new Set();
   let setupCount = 0;
+  let openingCount = 0;
   let maxSeq = -1;
   st.entries.forEach((e, i) => {
     const p = validateEntry(e);
@@ -133,6 +134,7 @@ function validateState(s) {
     seqs.add(e.seq);
     if (e.seq > maxSeq) maxSeq = e.seq;
     if (e.type === "setup") setupCount += 1;
+    if (e.type === "opening") openingCount += 1;
     if (e.type === "dose") {
       const key = doseKey(e.date, e.slot);
       if (doseSlots.has(key)) problems.push(`entries[${i}]: second dose for ${key}`);
@@ -140,6 +142,7 @@ function validateState(s) {
     }
   });
   if (setupCount > 1) problems.push("more than one setup entry");
+  if (openingCount > 1) problems.push("more than one opening entry");
   if (Number.isInteger(st.nextSeq) && st.nextSeq <= maxSeq) {
     problems.push(`nextSeq ${st.nextSeq} is not above the highest seq ${maxSeq}`);
   }
@@ -199,12 +202,17 @@ function doseKey(date, slot) {
 /**
  * First run. Writes a `setup` entry carrying the bottle count and a `settings`
  * entry carrying the starting plan and prescribed rate, both dated `today`.
- * @param {{count:number, plan:Plan, prescribedPerDay:number, today:DateKey}} opts
+ *
+ * `opening`, when given and non-zero, writes one `opening` entry after those
+ * two, also dated `today`: pills already banked (signed, may be negative)
+ * before the ledger began. It seeds surplus and never touches balance, since
+ * `count` already includes those pills. Omitted or 0 writes nothing.
+ * @param {{count:number, plan:Plan, prescribedPerDay:number, today:DateKey, opening?:number}} opts
  * @returns {State}
  */
 export function createState(opts) {
   if (typeof opts !== "object" || opts === null) throw new Error("createState: opts required");
-  const { count, plan, prescribedPerDay, today } = opts;
+  const { count, plan, prescribedPerDay, today, opening } = opts;
   /** @type {State} */
   const empty = {
     schema: SCHEMA,
@@ -214,7 +222,10 @@ export function createState(opts) {
   };
   // addEntry validates each piece: count, date, plan shape and rate.
   const withSetup = addEntry(empty, { type: "setup", date: today, qty: count });
-  return addEntry(withSetup, { type: "settings", date: today, prescribedPerDay, plan });
+  const withSettings = addEntry(withSetup, { type: "settings", date: today, prescribedPerDay, plan });
+  if (opening === undefined || opening === 0) return withSettings;
+  // Anything else, including NaN or a non-number, goes through validateEntry.
+  return addEntry(withSettings, { type: "opening", date: today, pills: opening });
 }
 
 // ---------------------------------------------------------------------------
@@ -222,7 +233,8 @@ export function createState(opts) {
 // ---------------------------------------------------------------------------
 
 /**
- * Invariants that span entries: one dose per (date, slot), one setup entry.
+ * Invariants that span entries: one dose per (date, slot), one setup entry,
+ * one opening entry.
  * @param {Entry[]} others Every entry except the one being checked.
  * @param {Entry} entry
  */
@@ -235,6 +247,11 @@ function assertFitsLog(others, entry) {
   }
   if (entry.type === "setup" && others.some((e) => e.type === "setup")) {
     throw new Error("there is already a setup entry; use a recount to correct the count");
+  }
+  // Unlike setup, an opening entry may be edited or deleted: the user may
+  // have got the arithmetic wrong. But there is never more than one.
+  if (entry.type === "opening" && others.some((e) => e.type === "opening")) {
+    throw new Error("there is already an opening entry; edit or delete it instead");
   }
 }
 

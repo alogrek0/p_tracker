@@ -47,6 +47,7 @@ function log() {
     dose: (date, slot, qty) => push({ type: "dose", date, slot, qty }),
     fill: (date, qty) => push({ type: "fill", date, qty }),
     recount: (date, qty) => push({ type: "recount", date, qty }),
+    opening: (date, pills) => push({ type: "opening", date, pills }),
   };
 }
 
@@ -729,10 +730,219 @@ test("summary bundles balance, surplus, projection and effective consistently", 
 
 test("no setup entry: everything degrades to zero rather than throwing", () => {
   assert.equal(balance([], "2026-09-03"), 0);
-  assert.deepEqual(surplus([], "2026-09-03"), { pills: 0, estimatedDays: 0, estimatedSlots: 0 });
+  assert.deepEqual(surplus([], "2026-09-03"), { pills: 0, opening: 0, estimatedDays: 0, estimatedSlots: 0 });
   assert.deepEqual(effectiveAt([], "2026-09-03"), { prescribedPerDay: 2, plan: { am: 1, pm: 1 } });
   assert.equal(gaps([], "2026-09-03").size, 0);
   const p = projection([], "2026-09-03");
   assert.equal(p.runOutDate, "2026-09-03");
   assert.equal(p.daysLeft, 0);
+});
+
+// ---------------------------------------------------------------------------
+// 20. Opening surplus: the one deliberate exception to the one-series invariant.
+// ---------------------------------------------------------------------------
+
+test("20. opening 12 on a fresh setup: surplus reads 12 on the setup day, balance untouched", () => {
+  const l = firstRun("2026-09-01", 40);
+  l.opening("2026-09-01", 12);
+  const today = "2026-09-01";
+
+  const s = surplus(l.entries, today);
+  assert.equal(s.pills, 12);
+  assert.equal(s.opening, 12);
+  assert.equal(s.estimatedDays, 0);
+  assert.equal(s.estimatedSlots, 0);
+  // The pills are already in the bottle and already counted by setup.
+  assert.equal(balance(l.entries, today), 40);
+  // The setup day itself does not deplete or estimate because of it.
+  assert.deepEqual(depletionForDay(l.entries, today), { total: 0, estimatedSlots: 0 });
+
+  // Every reading agrees with the summary bundle.
+  const sum = summary(l.entries, today);
+  assert.deepEqual(sum.surplus, { pills: 12, opening: 12, estimatedDays: 0, estimatedSlots: 0 });
+  assert.equal(sum.balance, 40);
+});
+
+test("20b. opening plus accrual: 12, then two completed days at 1.5 against 2, reads 13", () => {
+  const l = firstRun("2026-09-01", 40);
+  l.opening("2026-09-01", 12);
+  l.dose("2026-09-02", "am", 0.5);
+  l.dose("2026-09-02", "pm", 1);
+  l.dose("2026-09-03", "am", 0.5);
+  l.dose("2026-09-03", "pm", 1);
+  const today = "2026-09-04";
+
+  const s = surplus(l.entries, today);
+  assert.equal(s.pills, 13);
+  assert.equal(s.opening, 12);
+  assert.equal(s.estimatedDays, 0);
+  // Balance is exactly what it would be with no opening at all.
+  assert.equal(balance(l.entries, today), 37);
+});
+
+test("20c. a negative opening works and reads -3", () => {
+  const l = firstRun("2026-09-01", 40);
+  l.opening("2026-09-01", -3);
+  const s = surplus(l.entries, "2026-09-01");
+  assert.equal(s.pills, -3);
+  assert.equal(s.opening, -3);
+  assert.equal(balance(l.entries, "2026-09-01"), 40);
+
+  // A day of skips banks +2 on top of the debt.
+  l.dose("2026-09-02", "am", 0);
+  l.dose("2026-09-02", "pm", 0);
+  assert.equal(surplus(l.entries, "2026-09-03").pills, -1);
+  assert.equal(balance(l.entries, "2026-09-03"), 40);
+});
+
+test("20d. opening never moves balance, run-out, plannedPerDay, depletion or any recount gap", () => {
+  // A messy log with an estimate, a fill, a plan change and a recount with a
+  // real gap. Compare every non-surplus reading with and without the opening.
+  const build = (opening) => {
+    const l = firstRun("2026-09-01", 50, { prescribedPerDay: 2, plan: { am: 1, pm: 1 } });
+    if (opening !== undefined) l.opening("2026-09-01", opening);
+    l.dose("2026-09-02", "am", 0.5);
+    l.fill("2026-09-03", 10);
+    l.settings("2026-09-04", { plan: { am: 1.5, pm: 1 } });
+    l.dose("2026-09-05", "pm", 1);
+    l.recount("2026-09-06", 40);
+    l.dose("2026-09-07", "am", 1);
+    return l;
+  };
+  const without = build(undefined);
+  const withOpening = build(7.5);
+  const today = "2026-09-08";
+
+  for (let d = "2026-09-01"; d <= today; d = addDays(d, 1)) {
+    assert.equal(balance(withOpening.entries, d), balance(without.entries, d), `balance ${d}`);
+    assert.deepEqual(depletionForDay(withOpening.entries, d), depletionForDay(without.entries, d), `depletion ${d}`);
+    assert.deepEqual(projection(withOpening.entries, d), projection(without.entries, d), `projection ${d}`);
+    assert.deepEqual(effectiveAt(withOpening.entries, d), effectiveAt(without.entries, d), `effective ${d}`);
+  }
+  const rWith = withOpening.entries.find((e) => e.type === "recount");
+  const rWithout = without.entries.find((e) => e.type === "recount");
+  assert.equal(gaps(withOpening.entries, today).get(rWith.id), gaps(without.entries, today).get(rWithout.id));
+  assert.ok(gaps(without.entries, today).get(rWithout.id) > 0, "the fixture should carry a real gap");
+
+  // Surplus differs by exactly the opening and nothing else.
+  const sa = surplus(withOpening.entries, today);
+  const sb = surplus(without.entries, today);
+  assert.equal(sa.pills, sb.pills + 7.5);
+  assert.equal(sa.opening, 7.5);
+  assert.equal(sb.opening, 0);
+  assert.equal(sa.estimatedDays, sb.estimatedDays);
+  assert.equal(sa.estimatedSlots, sb.estimatedSlots);
+
+  // The opening's own date does not gate it: dated late or early, same reading.
+  const late = build(undefined);
+  late.opening("2026-09-07", 7.5);
+  assert.equal(surplus(late.entries, today).pills, sa.pills);
+  assert.equal(balance(late.entries, today), balance(without.entries, today));
+});
+
+test("20e. rule-4 identity still holds with an opening entry present", () => {
+  // Same messy log as the rule-4 test, plus an opening. balance and surplus
+  // must still be two readings of one depletion series: the identity
+  //   endOfDay(d) === endOfDay(d - 1) + fills(d) - depletionForDay(d).total
+  // is the guard that they have not diverged.
+  const l = firstRun("2026-09-01", 50, { prescribedPerDay: 2, plan: { am: 1, pm: 1 } });
+  l.opening("2026-09-01", 12);
+  l.dose("2026-09-02", "am", 0.5);
+  l.dose("2026-09-03", "am", 0);
+  l.dose("2026-09-03", "pm", 0);
+  l.fill("2026-09-04", 10);
+  l.settings("2026-09-05", { plan: { am: 1.5, pm: 1 } });
+  l.dose("2026-09-06", "pm", 1.5);
+  l.recount("2026-09-07", 40);
+  l.dose("2026-09-08", "am", 1);
+  l.dose("2026-09-08", "pm", 1);
+  l.recount("2026-09-05", 100);
+  const today = "2026-09-10";
+
+  const endOfDay = (d) => {
+    const dep = depletionForDay(l.entries, d);
+    const g = gaps(l.entries, d);
+    let known = 0;
+    for (const e of l.entries) {
+      if (e.date !== d) continue;
+      if (e.type === "dose") known += e.qty;
+      if (e.type === "recount") known += g.get(e.id) ?? 0;
+    }
+    return balance(l.entries, d) - (dep.total - known);
+  };
+
+  let prev = endOfDay("2026-09-01");
+  assert.equal(prev, 50);
+  for (let d = "2026-09-02"; d <= today; d = addDays(d, 1)) {
+    const cur = endOfDay(d);
+    const fills = l.entries.filter((e) => e.type === "fill" && e.date === d).reduce((a, e) => a + e.qty, 0);
+    const dep = depletionForDay(l.entries, d);
+    if (d === "2026-09-05") {
+      assert.deepEqual(dep, { total: 2.5, estimatedSlots: 2 });
+      assert.equal(cur, 97.5);
+    } else {
+      assert.equal(cur, prev + fills - dep.total, `day ${d}`);
+    }
+    prev = cur;
+  }
+  // Same hand-computed spot values as without the opening.
+  assert.equal(endOfDay("2026-09-07"), 37.5);
+  assert.equal(balance(l.entries, today), 33);
+  assert.equal(depletionOver(l.entries, "2026-09-05", "2026-09-09"), 100 - balance(l.entries, today));
+
+  // And surplus is the accrued figure plus exactly the opening. Accrued over
+  // 09-02..09-09 against 2/day: 2 - 1.5, 2 - 0, 2 - 2, 2 - 2, 2 - 2.5, 2 - 3,
+  // 2 - 57, 2 - 2, 2 - 2.5 (09-09) = 0.5 + 2 + 0 + 0 - 0.5 - 1 - 55 + 0 - 0.5 = -54.5.
+  const s = surplus(l.entries, today);
+  assert.equal(s.opening, 12);
+  assert.equal(s.pills, -54.5 + 12);
+});
+
+test("20f. opening validation: pills signed halves only; qty forbidden; pills forbidden elsewhere", () => {
+  const ok = (pills) => validateEntry({ id: "x", seq: 3, type: "opening", date: "2026-09-01", pills });
+  assert.deepEqual(ok(12), []);
+  assert.deepEqual(ok(-3), []);
+  assert.deepEqual(ok(0.5), []);
+  assert.deepEqual(ok(-0.5), []);
+  assert.deepEqual(ok(0), []);
+
+  for (const bad of [0.3, NaN, Infinity, -Infinity, "12", null, undefined]) {
+    const p = ok(bad);
+    assert.ok(p.length > 0, `pills ${String(bad)} accepted`);
+    assert.match(p.join("\n"), /pills/);
+  }
+  // Missing entirely.
+  assert.match(validateEntry({ id: "x", seq: 3, type: "opening", date: "2026-09-01" }).join("\n"), /pills/);
+
+  // qty, slot, plan and prescribedPerDay are all rejected on opening.
+  assert.match(
+    validateEntry({ id: "x", seq: 3, type: "opening", date: "2026-09-01", pills: 12, qty: 12 }).join("\n"),
+    /qty/,
+  );
+  assert.match(
+    validateEntry({ id: "x", seq: 3, type: "opening", date: "2026-09-01", pills: 12, slot: "am" }).join("\n"),
+    /slot/,
+  );
+  assert.match(
+    validateEntry({ id: "x", seq: 3, type: "opening", date: "2026-09-01", pills: 12, plan: { am: 1, pm: 1 } }).join("\n"),
+    /plan/,
+  );
+  assert.match(
+    validateEntry({ id: "x", seq: 3, type: "opening", date: "2026-09-01", pills: 12, prescribedPerDay: 2 }).join("\n"),
+    /prescribedPerDay/,
+  );
+
+  // pills is rejected on every other type, even alongside a valid qty.
+  for (const type of ["setup", "fill", "recount"]) {
+    const p = validateEntry({ id: "x", seq: 1, type, date: "2026-09-01", qty: 1, pills: 1 });
+    assert.match(p.join("\n"), /pills/, type);
+  }
+  assert.match(
+    validateEntry({ id: "x", seq: 1, type: "dose", date: "2026-09-01", slot: "am", qty: 1, pills: 1 }).join("\n"),
+    /pills/,
+  );
+  assert.match(
+    validateEntry({ id: "x", seq: 1, type: "settings", date: "2026-09-01", prescribedPerDay: 2, pills: 1 }).join("\n"),
+    /pills/,
+  );
 });

@@ -123,3 +123,47 @@ test("the previous app's storage key is never read", () => {
   assert.ok(reads.includes(STORAGE_KEY));
   assert.ok(!reads.includes("pill-ledger-v1"), "the old app's data must never be read");
 });
+
+test("a backup with two opening entries is rejected by both paths", () => {
+  // An opening entry moves surplus without moving the balance, so two of them
+  // would silently double a seeded surplus. load enforced this from the start;
+  // import did not, which meant such a file imported cleanly and was then
+  // refused on the next launch.
+  const doc = {
+    schema: 1,
+    nextSeq: 4,
+    meta: { lastExportAt: null, lowBalanceDays: 7 },
+    entries: [
+      { id: "e0", seq: 0, type: "setup", date: "2026-09-01", qty: 40 },
+      { id: "e1", seq: 1, type: "opening", date: "2026-09-01", pills: 12 },
+      { id: "e2", seq: 2, type: "opening", date: "2026-09-01", pills: 9 },
+    ],
+  };
+  const imported = importJSON(JSON.stringify(doc));
+  assert.equal(imported.ok, false, "import must reject a second opening entry");
+  assert.match(imported.errors.join(" "), /opening/i);
+  assert.equal(withStorage(JSON.stringify(doc), () => load()), null);
+});
+
+test("a single opening entry round trips and keeps its sign", () => {
+  const doc = {
+    schema: 1,
+    nextSeq: 3,
+    meta: { lastExportAt: null, lowBalanceDays: 7 },
+    entries: [
+      { id: "e0", seq: 0, type: "setup", date: "2026-09-01", qty: 40 },
+      { id: "e1", seq: 1, type: "opening", date: "2026-09-01", pills: -3.5 },
+    ],
+  };
+  const imported = importJSON(JSON.stringify(doc));
+  assert.equal(imported.ok, true, imported.errors.join("; "));
+  assert.equal(imported.state.entries[1].pills, -3.5);
+
+  const loaded = withStorage(JSON.stringify(doc), () => load());
+  assert.notEqual(loaded, null);
+  assert.equal(exportJSON(imported.state), exportJSON(loaded));
+
+  // And pills sits in the canonical key order rather than the sorted tail.
+  const text = exportJSON(imported.state);
+  assert.ok(text.indexOf('"pills"') < text.indexOf('"note"') || !text.includes('"note"'));
+});

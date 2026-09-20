@@ -48,7 +48,23 @@
  *      never heals.
  *   4. Today is never completed, so today never estimates and never accrues.
  *
- * @typedef {"setup"|"dose"|"fill"|"recount"|"settings"} EntryType
+ * THE ONE DELIBERATE EXCEPTION: `opening`
+ *
+ *   An `opening` entry carries a signed number of pills already banked before
+ *   the ledger began (surplus earned in earlier months, or a shortfall). It
+ *   moves surplus and does NOT move balance, and it is the only entry that
+ *   touches one reading without the other. That asymmetry is correct, not a
+ *   divergence: those pills are physically in the bottle and the `setup`
+ *   count already includes them. Adding them to the balance as well would
+ *   count them twice, which is exactly the bug the one-series invariant
+ *   exists to prevent. `walk` therefore ignores `opening` entirely (no
+ *   balance change, no depletion, no gap), and `surplus` adds it on top of
+ *   the accrued total as a constant, ungated by date: it describes banking
+ *   that happened before day one, so it applies in full from the setup day
+ *   onward. `Surplus.opening` reports the seeded amount alone so the UI can
+ *   disclose it.
+ *
+ * @typedef {"setup"|"dose"|"fill"|"recount"|"settings"|"opening"} EntryType
  * @typedef {"am"|"pm"} Slot
  * @typedef {string} DateKey  Local calendar day, "YYYY-MM-DD". Never parsed as UTC.
  *
@@ -64,6 +80,10 @@
  * @property {Slot}     [slot] dose only
  * @property {number}   [qty]  setup | dose | fill | recount. Multiple of 0.5, >= 0.
  *                             On a dose, 0 means a deliberate skip.
+ * @property {number}   [pills] opening only. SIGNED multiple of 0.5: pills
+ *                              banked before the ledger began. May be negative.
+ *                              Deliberately not `qty`, so the non-negative qty
+ *                              rule can never be applied to it by accident.
  * @property {number}   [prescribedPerDay] settings only
  * @property {Plan}     [plan]             settings only
  * @property {string}   [note]
@@ -77,7 +97,10 @@
  * @property {number} estimatedSlots How many of the two slots were assumed, not logged.
  *
  * @typedef {Object} Surplus
- * @property {number} pills          Cumulative pills banked vs the prescribed baseline.
+ * @property {number} pills          Cumulative pills banked vs the prescribed baseline,
+ *                                   INCLUDING `opening`.
+ * @property {number} opening        The seeded amount alone, from the `opening`
+ *                                   entry. 0 when there is none.
  * @property {number} estimatedDays  Days contributing at least one estimated slot.
  * @property {number} estimatedSlots Total assumed slots across the accrual window.
  *
@@ -96,7 +119,7 @@
  * @property {Effective}  effective
  */
 
-const ENTRY_TYPES = new Set(["setup", "dose", "fill", "recount", "settings"]);
+const ENTRY_TYPES = new Set(["setup", "dose", "fill", "recount", "settings", "opening"]);
 const SLOTS = /** @type {Slot[]} */ (["am", "pm"]);
 
 /**
@@ -170,6 +193,15 @@ export function isValidQty(n) {
   return typeof n === "number" && Number.isFinite(n) && n >= 0 && Number.isInteger(n * 2);
 }
 
+/**
+ * Signed multiple of 0.5. Only for `opening.pills`, which may legitimately be
+ * negative: a user can start the ledger already behind.
+ * @param {unknown} n @returns {boolean}
+ */
+export function isValidSignedQty(n) {
+  return typeof n === "number" && Number.isFinite(n) && Number.isInteger(n * 2);
+}
+
 /** @param {unknown} key @returns {boolean} */
 export function isValidDateKey(key) {
   if (typeof key !== "string") return false;
@@ -220,7 +252,7 @@ export function validateEntry(entry) {
     problems.push("seq must be a non-negative integer");
   }
   if (!ENTRY_TYPES.has(e.type)) {
-    problems.push(`type must be one of setup, dose, fill, recount, settings (got ${JSON.stringify(e.type)})`);
+    problems.push(`type must be one of setup, dose, fill, recount, settings, opening (got ${JSON.stringify(e.type)})`);
   }
   if (!isValidDateKey(e.date)) {
     problems.push(`date must be a real calendar date in YYYY-MM-DD form (got ${JSON.stringify(e.date)})`);
@@ -260,6 +292,13 @@ export function validateEntry(entry) {
       if (e.qty !== undefined) problems.push(`qty is not allowed on settings entries`);
       break;
     }
+    case "opening":
+      if (!isValidSignedQty(e.pills)) {
+        problems.push(`pills must be a multiple of 0.5, negative allowed (got ${JSON.stringify(e.pills)})`);
+      }
+      if (e.qty !== undefined) problems.push("qty is not allowed on opening entries; use pills");
+      if (e.slot !== undefined) problems.push(`slot is only allowed on dose entries`);
+      break;
     default:
       break;
   }
@@ -267,6 +306,9 @@ export function validateEntry(entry) {
   if (e.type !== "settings") {
     if (e.prescribedPerDay !== undefined) problems.push("prescribedPerDay is only allowed on settings entries");
     if (e.plan !== undefined) problems.push("plan is only allowed on settings entries");
+  }
+  if (e.type !== "opening" && e.pills !== undefined) {
+    problems.push("pills is only allowed on opening entries");
   }
 
   return problems;
@@ -390,6 +432,12 @@ function walk(sorted, today) {
         case "settings":
           eff = applySettings(eff, e);
           break;
+        case "opening":
+          // Deliberately nothing. The pills it describes are already in the
+          // bottle and already counted by `setup`; charging them here would
+          // count them twice. Opening is read by `surplus` only. See the
+          // header: the one exception to the one-series invariant.
+          break;
         default:
           break;
       }
@@ -471,8 +519,21 @@ function findSetup(sorted) {
 }
 
 /**
- * Cumulative over [setupDate + 1, yesterday]. The setup day never accrues and
- * today never accrues.
+ * The seeded amount: pills banked before the ledger began. Ungated by date on
+ * purpose. It describes the past, not a day in the log, so it applies in full
+ * from the setup day itself. state.js allows at most one opening entry; they
+ * are summed here so a log that somehow holds two still reads honestly.
+ * @param {Entry[]} sorted @returns {number}
+ */
+function openingPills(sorted) {
+  let n = 0;
+  for (const e of sorted) if (e.type === "opening") n += e.pills;
+  return n;
+}
+
+/**
+ * Cumulative over [setupDate + 1, yesterday], plus the opening amount. The
+ * setup day never accrues and today never accrues.
  * @param {Entry[]} entries @param {DateKey} today @returns {Surplus}
  */
 export function surplus(entries, today) {
@@ -482,10 +543,15 @@ export function surplus(entries, today) {
 
 /** @param {Entry[]} sorted @param {Walk} w @param {DateKey} today @returns {Surplus} */
 function surplusFromWalk(sorted, w, today) {
+  const opening = openingPills(sorted);
   const setup = findSetup(sorted);
-  if (!setup) return { pills: 0, estimatedDays: 0, estimatedSlots: 0 };
+  if (!setup) return { pills: opening, opening, estimatedDays: 0, estimatedSlots: 0 };
 
-  let pills = 0;
+  // Start from the seed. This is the ONLY place a surplus input is not a
+  // reading of the walk's depletion series: opening moves surplus without
+  // moving balance, because the pills are physically present and `setup`
+  // already counted them. Everything below this line is the walk's record.
+  let pills = opening;
   let estimatedDays = 0;
   let estimatedSlots = 0;
   let eff = defaultEffective();
@@ -499,7 +565,7 @@ function surplusFromWalk(sorted, w, today) {
     if (dep.estimatedSlots > 0) estimatedDays += 1;
     estimatedSlots += dep.estimatedSlots;
   }
-  return { pills, estimatedDays, estimatedSlots };
+  return { pills, opening, estimatedDays, estimatedSlots };
 }
 
 /** @param {Entry[]} entries @param {DateKey} today @returns {Projection} */

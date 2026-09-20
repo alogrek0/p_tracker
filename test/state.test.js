@@ -243,7 +243,7 @@ test("createState: first-run shape, setup and settings both dated today, meta de
   // The ledger reads it back as expected on day zero.
   const sum = summary(s.entries, TODAY);
   assert.equal(sum.balance, 40);
-  assert.deepEqual(sum.surplus, { pills: 0, estimatedDays: 0, estimatedSlots: 0 });
+  assert.deepEqual(sum.surplus, { pills: 0, opening: 0, estimatedDays: 0, estimatedSlots: 0 });
   assert.deepEqual(sum.effective, { prescribedPerDay: 2, plan: { am: 0.5, pm: 1 } });
   assert.equal(sum.projection.plannedPerDay, 1.5);
 
@@ -260,6 +260,163 @@ test("createState: first-run shape, setup and settings both dated today, meta de
   assert.throws(() => createState({ count: 40, plan: { am: 1, pm: 1 }, prescribedPerDay: 0.3, today: TODAY }), /prescribedPerDay/);
   assert.throws(() => createState({ count: 40, plan: { am: 1, pm: 1 }, prescribedPerDay: 2, today: "2026-9-19" }), /date/);
   assert.throws(() => createState({ count: 40, plan: { am: 1, pm: 1 }, prescribedPerDay: 2, today: "2026-02-30" }), /date/);
+});
+
+// ---------------------------------------------------------------------------
+// Opening surplus
+// ---------------------------------------------------------------------------
+
+test("createState with no opening, or opening 0, writes no opening entry", () => {
+  const none = createState({ count: 40, plan: { am: 1, pm: 1 }, prescribedPerDay: 2, today: TODAY });
+  assert.equal(none.entries.length, 2);
+  assert.equal(none.entries.some((e) => e.type === "opening"), false);
+  assert.equal(none.nextSeq, 3);
+
+  const zero = createState({ count: 40, plan: { am: 1, pm: 1 }, prescribedPerDay: 2, today: TODAY, opening: 0 });
+  assert.equal(zero.entries.length, 2);
+  assert.equal(zero.entries.some((e) => e.type === "opening"), false);
+  assert.equal(zero.nextSeq, 3);
+  assert.deepEqual(zero, none);
+  assert.deepEqual(surplus(zero.entries, TODAY), { pills: 0, opening: 0, estimatedDays: 0, estimatedSlots: 0 });
+});
+
+test("createState with an opening writes one opening entry dated setup day, after setup and settings", () => {
+  const s = createState({ count: 40, plan: { am: 1, pm: 1 }, prescribedPerDay: 2, today: TODAY, opening: 12 });
+  assert.equal(s.entries.length, 3);
+  assert.equal(s.nextSeq, 4);
+  const [setup, settings, opening] = s.entries;
+  assert.equal(setup.type, "setup");
+  assert.equal(settings.type, "settings");
+  assert.equal(opening.type, "opening");
+  assert.equal(opening.date, TODAY);
+  assert.equal(opening.pills, 12);
+  assert.equal(opening.seq, 3);
+  assert.equal("qty" in opening, false);
+
+  // Day zero: surplus is the seed, balance is the count. Nothing else moves.
+  const sum = summary(s.entries, TODAY);
+  assert.equal(sum.balance, 40);
+  assert.deepEqual(sum.surplus, { pills: 12, opening: 12, estimatedDays: 0, estimatedSlots: 0 });
+  const plain = createState({ count: 40, plan: { am: 1, pm: 1 }, prescribedPerDay: 2, today: TODAY });
+  assert.deepEqual(sum.projection, projection(plain.entries, TODAY));
+  assert.deepEqual(sum.effective, effectiveAt(plain.entries, TODAY));
+
+  // Negative is legitimate: the user can start behind.
+  const behind = createState({ count: 40, plan: { am: 1, pm: 1 }, prescribedPerDay: 2, today: TODAY, opening: -3 });
+  assert.equal(behind.entries.at(-1).pills, -3);
+  assert.equal(surplus(behind.entries, TODAY).pills, -3);
+  assert.equal(balance(behind.entries, TODAY), 40);
+
+  // Bad openings are rejected at construction.
+  for (const bad of [0.3, NaN, Infinity, "12", null]) {
+    assert.throws(
+      () => createState({ count: 40, plan: { am: 1, pm: 1 }, prescribedPerDay: 2, today: TODAY, opening: bad }),
+      /pills/,
+      `opening ${String(bad)}`,
+    );
+  }
+});
+
+test("a second opening entry is rejected by addEntry, by updateEntry, and by load", () => {
+  const s = createState({ count: 40, plan: { am: 1, pm: 1 }, prescribedPerDay: 2, today: TODAY, opening: 12 });
+  const snap = snapshot(s);
+  assert.throws(() => addEntry(s, { type: "opening", date: TODAY, pills: 5 }), /opening/);
+  assert.equal(snapshot(s), snap);
+
+  // Nor can another entry be retyped into a second opening.
+  const withFill = recordFill(s, { qty: 10, date: TODAY });
+  const fill = withFill.entries.at(-1);
+  assert.throws(() => updateEntry(withFill, fill.id, { type: "opening", qty: undefined, pills: 5 }), /opening/);
+
+  // But with no opening present, one can be added later.
+  const plain = createState({ count: 40, plan: { am: 1, pm: 1 }, prescribedPerDay: 2, today: TODAY });
+  const added = addEntry(plain, { type: "opening", date: TODAY, pills: 4 });
+  assert.equal(surplus(added.entries, TODAY).pills, 4);
+
+  // load rejects a stored state with two.
+  const two = {
+    schema: 1,
+    nextSeq: 4,
+    entries: [
+      { id: "e1", seq: 1, type: "setup", date: TODAY, qty: 40 },
+      { id: "e2", seq: 2, type: "opening", date: TODAY, pills: 12 },
+      { id: "e3", seq: 3, type: "opening", date: TODAY, pills: 1 },
+    ],
+  };
+  const store = makeStorage();
+  store.setItem(STORAGE_KEY, JSON.stringify(two));
+  withStorage(store, (warnings) => {
+    assert.equal(load(), null);
+    assert.equal(warnings.length, 1);
+    assert.match(warnings[0], /opening/);
+  });
+
+  // And accepts one, with pills negative, round-tripping exactly.
+  const one = createState({ count: 40, plan: { am: 1, pm: 1 }, prescribedPerDay: 2, today: TODAY, opening: -3 });
+  const store2 = makeStorage();
+  withStorage(store2, (warnings) => {
+    save(one);
+    const back = load();
+    assert.deepEqual(back, one);
+    assert.equal(warnings.length, 0);
+    assert.deepEqual(summary(back.entries, TODAY), summary(one.entries, TODAY));
+    assert.equal(summary(back.entries, TODAY).surplus.opening, -3);
+  });
+
+  // Bad pills in storage are rejected too, as is qty on an opening entry.
+  for (const entry of [
+    { id: "e2", seq: 2, type: "opening", date: TODAY, pills: 0.3 },
+    { id: "e2", seq: 2, type: "opening", date: TODAY, pills: "12" },
+    { id: "e2", seq: 2, type: "opening", date: TODAY },
+    { id: "e2", seq: 2, type: "opening", date: TODAY, pills: 12, qty: 12 },
+    { id: "e2", seq: 2, type: "dose", date: TODAY, slot: "am", qty: 1, pills: 12 },
+  ]) {
+    const st = makeStorage();
+    st.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ schema: 1, nextSeq: 3, entries: [{ id: "e1", seq: 1, type: "setup", date: TODAY, qty: 40 }, entry] }),
+    );
+    withStorage(st, (warnings) => {
+      assert.equal(load(), null, JSON.stringify(entry));
+      assert.equal(warnings.length, 1);
+    });
+  }
+});
+
+test("opening is editable and deletable: editing moves surplus, deleting returns it to the accrued figure", () => {
+  const setupDay = "2026-09-01";
+  let s = createState({ count: 40, plan: { am: 1, pm: 1 }, prescribedPerDay: 2, today: setupDay, opening: 12 });
+  s = logDose(s, { slot: "am", qty: 0.5, date: "2026-09-02" });
+  s = logDose(s, { slot: "pm", qty: 1, date: "2026-09-02" });
+  const today = "2026-09-03";
+  const opening = s.entries.find((e) => e.type === "opening");
+
+  assert.equal(surplus(s.entries, today).pills, 12.5);
+  assert.equal(balance(s.entries, today), 38.5);
+
+  // Edit: the arithmetic was wrong, it was 10.
+  const edited = updateEntry(s, opening.id, { pills: 10 });
+  assert.equal(edited.entries.find((e) => e.id === opening.id).pills, 10);
+  assert.deepEqual(surplus(edited.entries, today), { pills: 10.5, opening: 10, estimatedDays: 0, estimatedSlots: 0 });
+  assert.equal(balance(edited.entries, today), 38.5);
+  // Bad edits are rejected; the type cannot be smuggled to something with qty.
+  assert.throws(() => updateEntry(s, opening.id, { pills: 0.3 }), /pills/);
+  assert.throws(() => updateEntry(s, opening.id, { qty: 5 }), /qty/);
+  assert.throws(() => updateEntry(s, opening.id, { pills: undefined }), /pills/);
+
+  // Delete: surplus is the accrued 0.5 alone. Balance never knew about it.
+  const deleted = deleteEntry(s, opening.id);
+  assert.equal(deleted.entries.some((e) => e.type === "opening"), false);
+  assert.deepEqual(surplus(deleted.entries, today), { pills: 0.5, opening: 0, estimatedDays: 0, estimatedSlots: 0 });
+  assert.equal(balance(deleted.entries, today), 38.5);
+  assert.deepEqual(projection(deleted.entries, today), projection(s.entries, today));
+
+  // The input state was untouched throughout.
+  assert.equal(surplus(s.entries, today).pills, 12.5);
+
+  // Adding one back after deletion is fine: the rule is at most one at a time.
+  const readded = addEntry(deleted, { type: "opening", date: setupDay, pills: 2 });
+  assert.equal(surplus(readded.entries, today).pills, 2.5);
 });
 
 // ---------------------------------------------------------------------------

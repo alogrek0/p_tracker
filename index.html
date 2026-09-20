@@ -37,7 +37,7 @@
       <form class="card form" id="setup-form" novalidate>
 
         <fieldset class="setup__step" id="setup-step-1" data-step="1">
-          <legend class="setup__legend">Step 1 of 3. Count the bottle</legend>
+          <legend class="setup__legend">Step 1 of 4. Count the bottle</legend>
           <p class="hint">Tip every pill out and count them. A half counts as 0.5.</p>
           <div class="field">
             <label class="field__label" for="setup-count">Pills in the bottle now</label>
@@ -46,7 +46,7 @@
         </fieldset>
 
         <fieldset class="setup__step" id="setup-step-2" data-step="2" hidden>
-          <legend class="setup__legend">Step 2 of 3. Your standing plan</legend>
+          <legend class="setup__legend">Step 2 of 4. Your standing plan</legend>
           <p class="hint">What you intend to take each day. Logging a dose never changes this.</p>
           <div class="field">
             <label class="field__label" for="setup-plan-am">Morning plan</label>
@@ -59,12 +59,27 @@
         </fieldset>
 
         <fieldset class="setup__step" id="setup-step-3" data-step="3" hidden>
-          <legend class="setup__legend">Step 3 of 3. Confirm the prescribed rate</legend>
+          <legend class="setup__legend">Step 3 of 4. Confirm the prescribed rate</legend>
           <p class="hint">The rate your prescription assumes. Surplus is measured against it.</p>
           <div class="field">
             <label class="field__label" for="setup-prescribed">Prescribed pills per day</label>
             <input class="field__input" id="setup-prescribed" name="prescribedPerDay" type="number" inputmode="decimal" step="0.5" min="0" value="2" required>
           </div>
+        </fieldset>
+
+        <fieldset class="setup__step" id="setup-step-4" data-step="4" hidden>
+          <legend class="setup__legend">Step 4 of 4. Pills you are already ahead</legend>
+          <p class="hint">From the fill you are taking from now. Both numbers are on the pharmacy label. This works out how far ahead you already are, so your surplus does not start from nothing.</p>
+          <div class="field">
+            <label class="field__label" for="setup-fill-date">Date of that fill</label>
+            <input class="field__input" id="setup-fill-date" name="fillDate" type="date">
+          </div>
+          <div class="field">
+            <label class="field__label" for="setup-fill-qty">Pills they dispensed</label>
+            <input class="field__input" id="setup-fill-qty" name="fillQty" type="number" inputmode="decimal" step="0.5" min="0">
+          </div>
+          <p class="hint" id="setup-opening-result" aria-live="polite"></p>
+          <p class="hint">Leave both blank to start your surplus at zero.</p>
         </fieldset>
 
         <p class="form__error" id="setup-error" role="alert" hidden></p>
@@ -136,6 +151,7 @@
           <p class="stat__value" id="stat-surplus-value" aria-describedby="stat-surplus-label">0</p>
           <p class="stat__unit" id="stat-surplus-unit">pills ahead</p>
           <p class="stat__note" id="stat-surplus-note" hidden></p>
+          <p class="stat__note" id="stat-surplus-opening" hidden></p>
         </div>
         <div class="stat" id="stat-balance">
           <p class="stat__label" id="stat-balance-label">On hand</p>

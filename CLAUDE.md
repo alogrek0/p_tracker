@@ -31,7 +31,14 @@ rules that must never be broken.
    getMonth / getDate. Step days with setDate, never by dividing milliseconds.
 
 7. **Quantities are non-negative multiples of 0.5.** Validated at every input and
-   on import.
+   on import. The one exception is `pills` on an `opening` entry, which is
+   signed: starting behind is a real state. It is a separate field name from
+   `qty` precisely so the non-negative rule cannot be applied to it by accident.
+
+9. **`opening` moves surplus and never the balance.** Those pills are already
+   in the bottle and already counted by `setup`. It is the single deliberate
+   break in "balance and surplus are two readings of one depletion series", and
+   it breaks it in one direction only.
 
 8. **Bump `VERSION` in `sw.js`** on every shipped change to any cached file.
 

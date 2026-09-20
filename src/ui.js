@@ -49,6 +49,7 @@ import {
   sortEntries,
   localDateKey,
   addDays,
+  daysBetween,
   parseLocalDate,
   isValidQty,
   isValidDateKey,
@@ -89,6 +90,7 @@ const ESTIMATED_ROW_WINDOW_DAYS = 180;
 let appState = null;
 let currentView = "home";
 let setupStep = 1;
+const SETUP_LAST_STEP = 4;
 let booted = false;
 
 /** True once the user has typed in the settings form, so a render cannot stomp it. */
@@ -366,6 +368,18 @@ function renderHome(sum, today) {
     showText(note, `includes ${estimatedDays} estimated ${plural(estimatedDays, "day", "days")}`);
   } else {
     hideText(note);
+  }
+
+  const opening = sum.surplus.opening ?? 0;
+  const openingNote = el("stat-surplus-opening");
+  if (opening !== 0) {
+    const ahead = opening > 0;
+    showText(
+      openingNote,
+      `includes ${fmt(Math.abs(opening))} ${plural(Math.abs(opening), "pill", "pills")} carried in${ahead ? "" : ", behind"}`,
+    );
+  } else {
+    hideText(openingNote);
   }
 
   el("stat-balance-value").textContent = fmt(sum.balance);
@@ -719,13 +733,61 @@ function renderSettings(sum) {
 // --- Setup -----------------------------------------------------------------
 
 function renderSetupStep() {
-  for (const n of [1, 2, 3]) {
+  for (const n of [1, 2, 3, 4]) {
     el(`setup-step-${n}`).hidden = n !== setupStep;
   }
   el("setup-back").hidden = setupStep === 1;
-  el("setup-next").hidden = setupStep === 3;
-  el("setup-finish").hidden = setupStep !== 3;
+  el("setup-next").hidden = setupStep === SETUP_LAST_STEP;
+  el("setup-finish").hidden = setupStep !== SETUP_LAST_STEP;
+  if (setupStep === SETUP_LAST_STEP) renderOpeningPreview();
   hideText(el("setup-error"));
+}
+
+/**
+ * Pills already banked, worked out from the fill currently being taken from.
+ *
+ *   expected = dispensed - prescribedPerDay * days since the fill
+ *   opening  = counted now - expected
+ *
+ * Returns null when the two fill fields are not both filled in, which means
+ * start at zero. Can be negative: starting behind is a real state.
+ * @returns {{opening:number, expected:number, days:number}|null}
+ */
+function derivedOpening() {
+  const dateStr = el("setup-fill-date").value;
+  const qtyStr = el("setup-fill-qty").value;
+  if (!dateStr || qtyStr === "") return null;
+  if (!isValidDateKey(dateStr)) return null;
+  const dispensed = Number(qtyStr);
+  const rate = Number(el("setup-prescribed").value);
+  const count = Number(el("setup-count").value);
+  if (!isValidQty(dispensed) || !isValidQty(rate) || !isValidQty(count)) return null;
+  const today = todayKey();
+  if (dateStr > today) return null;
+  const days = daysBetween(dateStr, today);
+  const expected = dispensed - rate * days;
+  const opening = Math.round((count - expected) * 2) / 2;
+  return { opening, expected, days };
+}
+
+/** Show the working, so a wrong fill date is obvious before it is committed. */
+function renderOpeningPreview() {
+  const out = el("setup-opening-result");
+  const d = derivedOpening();
+  if (!d) {
+    out.textContent = "";
+    return;
+  }
+  const count = Number(el("setup-count").value);
+  const ahead = d.opening >= 0;
+  const lines = [
+    `At ${fmt(Number(el("setup-prescribed").value))} a day for ${d.days} ${plural(d.days, "day", "days")} you would have ${fmt(d.expected)} left.`,
+    `You counted ${fmt(count)}, so you are ${fmt(Math.abs(d.opening))} ${plural(Math.abs(d.opening), "pill", "pills")} ${ahead ? "ahead" : "behind"}.`,
+  ];
+  if (d.expected < 0) {
+    lines.push("That fill would already have run out at the prescribed rate. Check the date, or use the fill you are taking from now.");
+  }
+  out.textContent = lines.join(" ");
 }
 
 /** @returns {boolean} */
@@ -751,6 +813,28 @@ function setupStepValid() {
       return false;
     }
   }
+  if (setupStep === SETUP_LAST_STEP) {
+    const dateStr = el("setup-fill-date").value;
+    const qtyStr = el("setup-fill-qty").value;
+    const bothBlank = !dateStr && qtyStr === "";
+    if (!bothBlank) {
+      if (!dateStr || !isValidDateKey(dateStr)) {
+        showText(err, "Give the date of that fill, or clear both fields to start at zero.");
+        el("setup-fill-date").focus();
+        return false;
+      }
+      if (dateStr > todayKey()) {
+        showText(err, "That fill date is in the future.");
+        el("setup-fill-date").focus();
+        return false;
+      }
+      if (!isValidQty(Number(qtyStr))) {
+        showText(err, "Pills dispensed must be 0 or more, in steps of 0.5.");
+        el("setup-fill-qty").focus();
+        return false;
+      }
+    }
+  }
   hideText(err);
   return true;
 }
@@ -763,6 +847,7 @@ function finishSetup() {
       count: Number(el("setup-count").value),
       plan: { am: Number(el("setup-plan-am").value), pm: Number(el("setup-plan-pm").value) },
       prescribedPerDay: Number(el("setup-prescribed").value),
+      opening: derivedOpening()?.opening ?? 0,
       today,
     });
   } catch (err) {
@@ -1055,7 +1140,7 @@ function onAppClick(ev) {
 
     case "setup-next":
       if (!setupStepValid()) return;
-      setupStep = Math.min(3, setupStep + 1);
+      setupStep = Math.min(SETUP_LAST_STEP, setupStep + 1);
       renderSetupStep();
       break;
 
@@ -1204,7 +1289,7 @@ function onSettingsSubmit(ev) {
 
 function onSetupSubmit(ev) {
   ev.preventDefault();
-  if (setupStep < 3) {
+  if (setupStep < SETUP_LAST_STEP) {
     if (setupStepValid()) {
       setupStep += 1;
       renderSetupStep();
@@ -1246,6 +1331,10 @@ function wire() {
     ev.preventDefault();
     saveDialog();
   });
+  for (const id of ["setup-fill-date", "setup-fill-qty"]) {
+    el(id).addEventListener("input", renderOpeningPreview);
+  }
+
   el("entry-type").addEventListener("change", (ev) => {
     syncDialogFields(ev.target.value);
     hideText(el("entry-error"));
