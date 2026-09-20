@@ -181,6 +181,7 @@
       <form class="card form" id="recount-form" novalidate>
         <h3 class="card__title">Recount the bottle</h3>
         <p class="hint">Anything missing appears in history as unaccounted.</p>
+        <p class="hint hint--timing" id="recount-timing" hidden></p>
         <div class="field">
           <label class="field__label" for="recount-qty">Pills counted</label>
           <input class="field__input" id="recount-qty" name="qty" type="number" inputmode="decimal" step="0.5" min="0" required>
@@ -207,6 +208,14 @@
         <p class="hint">Importing replaces everything stored now.</p>
         <div class="form__actions">
           <button class="btn btn--danger" id="import-btn" type="button" data-action="import">Replace from file</button>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="start-over-title">
+        <h3 class="card__title" id="start-over-title">Start over</h3>
+        <p class="hint">Erases every entry and returns to first run setup. Export a backup first if you want to keep this ledger.</p>
+        <div class="form__actions">
+          <button class="btn btn--danger" id="start-over-btn" type="button" data-action="start-over">Erase and start over</button>
         </div>
       </section>
 

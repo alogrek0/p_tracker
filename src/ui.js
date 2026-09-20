@@ -39,6 +39,7 @@ import {
   addEntry,
   updateEntry,
   deleteEntry,
+  STORAGE_KEY,
 } from "./state.js";
 
 import {
@@ -679,6 +680,22 @@ function renderActions(today) {
   const recountDate = el("recount-date");
   if (!recountDate.value) recountDate.value = today;
 
+  // Entries carry no time of day, so when today still has an unlogged slot the
+  // ledger cannot tell whether a count was taken before or after that dose. It
+  // assumes before. Say so, but only while the ambiguity is actually live.
+  const loggedToday = new Set(
+    appState.entries.filter((e) => e.type === "dose" && e.date === today).map((e) => e.slot),
+  );
+  const timing = el("recount-timing");
+  if (loggedToday.size < 2) {
+    showText(
+      timing,
+      "Count before your first dose of the day. If you have already taken a dose today, log it first, then count.",
+    );
+  } else {
+    hideText(timing);
+  }
+
   const last = appState.meta.lastExportAt;
   el("export-last").textContent = last ? `Last backup ${rowDate(last)}.` : "No backup yet.";
 }
@@ -917,6 +934,22 @@ function doExport() {
   actionStatus("Backup saved to your downloads.");
 }
 
+/**
+ * Erase the ledger and return to first run setup. Two confirms, because there
+ * is no undo and no copy of this data anywhere else.
+ */
+function doStartOver() {
+  if (!window.confirm("Erase every entry and return to first run setup? This cannot be undone.")) return;
+  if (!window.confirm("Last check. Your whole ledger will be erased. Export a backup first if you want to keep it.")) return;
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch (err) {
+    actionStatus(`Could not clear storage. ${readable(err)}`);
+    return;
+  }
+  window.location.reload();
+}
+
 async function doImport() {
   const input = el("import-file");
   const file = input.files && input.files[0];
@@ -988,6 +1021,10 @@ function onAppClick(ev) {
       mutate((s) => deleteEntry(s, existing.id));
       break;
     }
+
+    case "start-over":
+      doStartOver();
+      break;
 
     case "add-entry":
       openDialog(null);
