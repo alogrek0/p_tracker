@@ -604,8 +604,12 @@ function projectionFromSorted(sorted, today, bal) {
   return { plannedPerDay, remainingToday, runOutDate: addDays(today, daysLeft), daysLeft };
 }
 
-/** Refills come round on a fixed cycle, counted from the previous pickup. */
-export const REFILL_INTERVAL_DAYS = 28;
+/**
+ * Refills come round on a 28 day supply. The pickup day is day 1 of it, so the
+ * next refill falls 27 days later: picked up 17 Sep, due 14 Oct, as the
+ * pharmacy reports it.
+ */
+export const REFILL_INTERVAL_DAYS = 27;
 
 /**
  * @typedef {Object} RefillDue

@@ -730,30 +730,34 @@ test("summary bundles balance, surplus, projection and effective consistently", 
   assert.equal(s.projection.plannedPerDay, 1.5);
 });
 
-test("nextRefill: 28 days after the last pickup, whatever the quantity", () => {
-  assert.equal(REFILL_INTERVAL_DAYS, 28);
+test("nextRefill: 27 days after the last pickup, as the pharmacy counts it, whatever the quantity", () => {
+  assert.equal(REFILL_INTERVAL_DAYS, 27);
+  // The pharmacy's own reading: picked up 17 Sep 2026, next refill 14 Oct 2026.
+  const p = firstRun("2026-09-01", 10);
+  p.fill("2026-09-17", 56);
+  assert.equal(nextRefill(p.entries, "2026-09-24").dueDate, "2026-10-14");
   const l = firstRun("2026-09-01", 10, { prescribedPerDay: 2, plan: { am: 0.5, pm: 1 } });
   assert.equal(nextRefill(l.entries, "2026-09-03"), null);
 
   l.fill("2026-09-03", 60);
   assert.deepEqual(nextRefill(l.entries, "2026-09-03"), {
     lastFillDate: "2026-09-03",
-    dueDate: "2026-10-01",
+    dueDate: "2026-09-30",
   });
 
   // Quantity and prescribed rate play no part.
   l.fill("2026-09-10", 12.5);
   l.settings("2026-09-11", { prescribedPerDay: 4 });
-  assert.equal(nextRefill(l.entries, "2026-09-12").dueDate, "2026-10-08");
+  assert.equal(nextRefill(l.entries, "2026-09-12").dueDate, "2026-10-07");
 
   // A fill dated after today does not count yet.
   l.fill("2026-09-20", 56);
   assert.equal(nextRefill(l.entries, "2026-09-12").lastFillDate, "2026-09-10");
-  assert.equal(nextRefill(l.entries, "2026-09-20").dueDate, "2026-10-18");
+  assert.equal(nextRefill(l.entries, "2026-09-20").dueDate, "2026-10-17");
 
   // A backfilled older fill does not pull the date back.
   l.fill("2026-09-05", 56);
-  assert.equal(nextRefill(l.entries, "2026-09-25").dueDate, "2026-10-18");
+  assert.equal(nextRefill(l.entries, "2026-09-25").dueDate, "2026-10-17");
 });
 
 test("nextRefill never mutates the log it reads", () => {
