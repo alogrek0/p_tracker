@@ -194,9 +194,11 @@
           <label class="field__label" for="fill-date">Date</label>
           <input class="field__input" id="fill-date" name="date" type="date" required>
         </div>
+        <p class="form__error" id="fill-error" role="alert" hidden></p>
         <div class="form__actions">
           <button class="btn btn--primary" id="fill-save" type="submit">Save refill</button>
         </div>
+        <p class="form__status" id="fill-status" role="status" aria-live="polite" hidden></p>
       </form>
 
       <form class="card form" id="recount-form" novalidate>
@@ -211,9 +213,11 @@
           <label class="field__label" for="recount-date">Date</label>
           <input class="field__input" id="recount-date" name="date" type="date" required>
         </div>
+        <p class="form__error" id="recount-error" role="alert" hidden></p>
         <div class="form__actions">
           <button class="btn btn--primary" id="recount-save" type="submit">Save recount</button>
         </div>
+        <p class="form__status" id="recount-status" role="status" aria-live="polite" hidden></p>
       </form>
 
       <section class="card" aria-labelledby="backup-title">

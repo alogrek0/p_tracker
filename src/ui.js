@@ -733,6 +733,23 @@ function renderActions(today) {
   el("export-last").textContent = last ? `Last backup ${rowDate(last)}.` : "No backup yet.";
 }
 
+/**
+ * Result of a refill or recount save, shown under that form's own button so
+ * it is on screen where the user just tapped.
+ * @param {"fill"|"recount"} form @param {string} text @param {boolean} isError
+ */
+function formResult(form, text, isError) {
+  const err = el(`${form}-error`);
+  const ok = el(`${form}-status`);
+  if (isError) {
+    showText(err, text);
+    hideText(ok);
+  } else {
+    hideText(err);
+    showText(ok, text);
+  }
+}
+
 /** @param {string} text */
 function actionStatus(text) {
   showText(el("actions-status"), text);
@@ -1218,33 +1235,46 @@ function onTabKeydown(ev) {
 
 function onFillSubmit(ev) {
   ev.preventDefault();
-  const qty = Number(el("fill-qty").value);
+  const raw = el("fill-qty").value.trim();
+  const qty = Number(raw);
   const date = el("fill-date").value;
+  // A blank number input reads as "", and Number("") is 0, which would pass
+  // as a real refill of nothing and move the next refill date.
+  if (raw === "") {
+    formResult("fill", "Enter how many pills you picked up.", true);
+    return;
+  }
   if (!isValidQty(qty)) {
-    actionStatus("Pills picked up must be 0 or more, in steps of 0.5.");
+    formResult("fill", "Pills picked up must be 0 or more, in steps of 0.5.", true);
     return;
   }
   if (!isValidDateKey(date)) {
-    actionStatus("Pick a real date for the refill.");
+    formResult("fill", "Pick a real date for the refill.", true);
     return;
   }
   if (mutate((s) => recordFill(s, { qty, date }))) {
     el("fill-qty").value = "";
     el("fill-date").value = todayKey();
-    actionStatus(`Refill of ${fmt(qty)} recorded.`);
+    formResult("fill", `Refill of ${fmt(qty)} recorded for ${rowDate(date)}.`, false);
   }
 }
 
 function onRecountSubmit(ev) {
   ev.preventDefault();
-  const qty = Number(el("recount-qty").value);
+  const raw = el("recount-qty").value.trim();
+  const qty = Number(raw);
   const date = el("recount-date").value;
+  // Blank is not a count of 0. See onFillSubmit.
+  if (raw === "") {
+    formResult("recount", "Enter how many pills you counted.", true);
+    return;
+  }
   if (!isValidQty(qty)) {
-    actionStatus("Pills counted must be 0 or more, in steps of 0.5.");
+    formResult("recount", "Pills counted must be 0 or more, in steps of 0.5.", true);
     return;
   }
   if (!isValidDateKey(date)) {
-    actionStatus("Pick a real date for the recount.");
+    formResult("recount", "Pick a real date for the recount.", true);
     return;
   }
   const before = appState.nextSeq;
@@ -1253,10 +1283,12 @@ function onRecountSubmit(ev) {
     el("recount-date").value = todayKey();
     // The gap is derived, so read it back rather than storing it anywhere.
     const gap = gaps(appState.entries, todayKey()).get(`e${before}`) ?? 0;
-    actionStatus(
+    formResult(
+      "recount",
       gap > 0
         ? `Recount saved. ${fmt(gap)} ${plural(gap, "pill", "pills")} unaccounted.`
         : "Recount saved. Nothing unaccounted.",
+      false,
     );
   }
 }
@@ -1338,6 +1370,12 @@ function wire() {
   el("setup-form").addEventListener("submit", onSetupSubmit);
   el("fill-form").addEventListener("submit", onFillSubmit);
   el("recount-form").addEventListener("submit", onRecountSubmit);
+  for (const form of ["fill", "recount"]) {
+    el(`${form}-form`).addEventListener("input", () => {
+      hideText(el(`${form}-error`));
+      hideText(el(`${form}-status`));
+    });
+  }
   el("settings-form").addEventListener("submit", onSettingsSubmit);
   el("settings-form").addEventListener("input", () => {
     settingsDirty = true;

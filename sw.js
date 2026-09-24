@@ -34,7 +34,7 @@
  * makes the next activate throw away the previous shell.
  */
 
-const VERSION = "6";
+const VERSION = "7";
 const CACHE_NAME = `ptracker-shell-v${VERSION}`;
 
 /*

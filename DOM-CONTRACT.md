@@ -200,15 +200,19 @@ fallback.
 | `fill-qty` | `input[type=number]` | `step="0.5"`, `min="0"`. Validate with `isValidQty` before writing. |
 | `fill-date` | `input[type=date]` | Prefill with today's `DateKey`. The value is already `YYYY-MM-DD`, so pass it straight through. Never feed it to `new Date(string)`. |
 | `fill-save` | `button[type=submit]` | |
+| `fill-error` | `p` | `role="alert"`. Starts `hidden`. Why the refill was refused, including a blank amount. |
+| `fill-status` | `p` | `role="status"`. Starts `hidden`. Confirms the saved refill, right under its button. |
 | `recount-form` | `form` | `submit` handler. |
 | `recount-qty` | `input[type=number]` | |
 | `recount-date` | `input[type=date]` | Prefill with today. |
 | `recount-save` | `button[type=submit]` | |
+| `recount-error` | `p` | `role="alert"`. Starts `hidden`. Why the recount was refused, including a blank count. |
+| `recount-status` | `p` | `role="status"`. Starts `hidden`. Confirms the saved recount and its gap, right under its button. |
 | `export-last` | `p` | Write the last export date or `No backup yet`. |
 | `export-btn` | `button` | `data-action="export"`. |
 | `import-file` | `input[type=file]` | Labelled, accepts JSON. |
 | `import-btn` | `button` | `data-action="import"`. Reads the chosen file. Styled as a danger button because import replaces everything. |
-| `actions-status` | `p` | `role="status"`. Starts `hidden`. Un-hide and write the result of a save, an export, or an import. |
+| `actions-status` | `p` | `role="status"`. Starts `hidden`. Un-hide and write the result of an export, an import, or a start over. Refill and recount results go under their own forms instead. |
 
 ---
 
