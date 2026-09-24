@@ -44,6 +44,7 @@ import {
 
 import {
   summary,
+  nextRefill,
   gaps,
   effectiveAt,
   sortEntries,
@@ -397,6 +398,24 @@ function renderHome(sum, today) {
       showText(runOutNote, "today is the last day");
     } else {
       showText(runOutNote, `${proj.daysLeft} ${plural(proj.daysLeft, "day", "days")} left`);
+    }
+  }
+
+  const refillValue = el("stat-refill-value");
+  const refillNote = el("stat-refill-note");
+  const refill = nextRefill(appState.entries, today);
+  if (refill === null) {
+    refillValue.textContent = "none yet";
+    showText(refillNote, "log a refill to see it");
+  } else {
+    refillValue.textContent = shortDate(refill.dueDate);
+    const until = daysBetween(today, refill.dueDate);
+    if (until === 0) {
+      showText(refillNote, "due today");
+    } else if (until > 0) {
+      showText(refillNote, `in ${until} ${plural(until, "day", "days")}`);
+    } else {
+      showText(refillNote, `due ${-until} ${plural(-until, "day", "days")} ago`);
     }
   }
 }

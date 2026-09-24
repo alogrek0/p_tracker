@@ -24,6 +24,8 @@ import {
   depletionForDay,
   surplus,
   projection,
+  nextRefill,
+  REFILL_INTERVAL_DAYS,
   summary,
 } from "../src/ledger.js";
 
@@ -726,6 +728,40 @@ test("summary bundles balance, surplus, projection and effective consistently", 
   assert.equal(s.balance, 38.5);
   assert.equal(s.surplus.pills, 0.5);
   assert.equal(s.projection.plannedPerDay, 1.5);
+});
+
+test("nextRefill: 28 days after the last pickup, whatever the quantity", () => {
+  assert.equal(REFILL_INTERVAL_DAYS, 28);
+  const l = firstRun("2026-09-01", 10, { prescribedPerDay: 2, plan: { am: 0.5, pm: 1 } });
+  assert.equal(nextRefill(l.entries, "2026-09-03"), null);
+
+  l.fill("2026-09-03", 60);
+  assert.deepEqual(nextRefill(l.entries, "2026-09-03"), {
+    lastFillDate: "2026-09-03",
+    dueDate: "2026-10-01",
+  });
+
+  // Quantity and prescribed rate play no part.
+  l.fill("2026-09-10", 12.5);
+  l.settings("2026-09-11", { prescribedPerDay: 4 });
+  assert.equal(nextRefill(l.entries, "2026-09-12").dueDate, "2026-10-08");
+
+  // A fill dated after today does not count yet.
+  l.fill("2026-09-20", 56);
+  assert.equal(nextRefill(l.entries, "2026-09-12").lastFillDate, "2026-09-10");
+  assert.equal(nextRefill(l.entries, "2026-09-20").dueDate, "2026-10-18");
+
+  // A backfilled older fill does not pull the date back.
+  l.fill("2026-09-05", 56);
+  assert.equal(nextRefill(l.entries, "2026-09-25").dueDate, "2026-10-18");
+});
+
+test("nextRefill never mutates the log it reads", () => {
+  const l = firstRun("2026-09-01", 10);
+  l.fill("2026-09-02", 60);
+  const before = JSON.stringify(l.entries);
+  nextRefill(l.entries, "2026-09-05");
+  assert.equal(JSON.stringify(l.entries), before);
 });
 
 test("no setup entry: everything degrades to zero rather than throwing", () => {

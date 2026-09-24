@@ -604,6 +604,32 @@ function projectionFromSorted(sorted, today, bal) {
   return { plannedPerDay, remainingToday, runOutDate: addDays(today, daysLeft), daysLeft };
 }
 
+/** Refills come round on a fixed cycle, counted from the previous pickup. */
+export const REFILL_INTERVAL_DAYS = 28;
+
+/**
+ * @typedef {Object} RefillDue
+ * @property {DateKey} lastFillDate  Most recent fill dated on or before today.
+ * @property {DateKey} dueDate       lastFillDate plus REFILL_INTERVAL_DAYS.
+ */
+
+/**
+ * When the next refill is due: REFILL_INTERVAL_DAYS after the last pickup,
+ * whatever quantity it was. Derived from the log on every read. Fills dated
+ * after today are ignored, as the balance ignores them. Returns null when no
+ * fill has been logged yet.
+ * @param {Entry[]} entries @param {DateKey} today @returns {RefillDue|null}
+ */
+export function nextRefill(entries, today) {
+  let lastFillDate = null;
+  for (const e of entries) {
+    if (e.type !== "fill" || e.date > today) continue;
+    if (lastFillDate === null || e.date > lastFillDate) lastFillDate = e.date;
+  }
+  if (lastFillDate === null) return null;
+  return { lastFillDate, dueDate: addDays(lastFillDate, REFILL_INTERVAL_DAYS) };
+}
+
 /** Everything the UI needs, in one pass. @param {Entry[]} entries @param {DateKey} today @returns {Summary} */
 export function summary(entries, today) {
   const sorted = sortEntries(entries);

@@ -463,6 +463,10 @@ button, input, select, textarea {
   text-align: center;
   padding: var(--gap-lg) var(--gap);
 }
+/* Half width, in the right column, directly under Runs out. */
+.stat--under {
+  grid-column: 2;
+}
 .stat__label {
   font-size: 0.75rem;
   font-weight: 600;
@@ -733,6 +737,7 @@ button, input, select, textarea {
   .slot { flex: 1 1 0; min-width: 0; }
   .stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .stat--headline { grid-column: 1 / -1; }
+  .stat--under { grid-column: auto; }
   .main { max-width: 42rem; margin: 0 auto; }
   .banners { max-width: 42rem; margin: 0 auto; }
 }

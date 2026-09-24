@@ -136,8 +136,11 @@ Read `Number(button.dataset.qty)`. They are equal width by grid and at least
 | `stat-balance-value` | `p` | Pills on hand, from `summary.balance`. |
 | `stat-runout-value` | `p` | Run out date as a short local string, for example `9 Oct`. |
 | `stat-runout-note` | `p` | Optional second line, for example `18 days left`. Starts `hidden`. |
+| `stat-refill` | `div` | Half width tile with `stat--under`, which pins it to the right column under Runs out on narrow screens. |
+| `stat-refill-value` | `p` | `nextRefill(entries, today).dueDate`, 28 days after the last fill, as a short local string, for example `3 Oct`. `none yet` before any fill. |
+| `stat-refill-note` | `p` | Second line, for example `in 9 days`, `due today`, `due 2 days ago`. Starts `hidden`. |
 
-Labels `stat-surplus-label`, `stat-balance-label`, `stat-runout-label` are
+Labels `stat-surplus-label`, `stat-balance-label`, `stat-runout-label`, `stat-refill-label` are
 static and are referenced by `aria-describedby` on the values. Leave them alone.
 
 ---
