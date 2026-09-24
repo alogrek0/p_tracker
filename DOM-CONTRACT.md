@@ -137,7 +137,7 @@ Read `Number(button.dataset.qty)`. They are equal width by grid and at least
 | `stat-runout-value` | `p` | Run out date as a short local string, for example `9 Oct`. |
 | `stat-runout-note` | `p` | Optional second line, for example `18 days left`. Starts `hidden`. |
 | `stat-refill` | `div` | Half width tile with `stat--under`, which pins it to the right column under Runs out on narrow screens. |
-| `stat-refill-value` | `p` | `nextRefill(entries, today).dueDate`, 27 days after the last fill (day 1 of a 28 day supply is the pickup day), as a short local string, for example `3 Oct`. `none yet` before any fill. |
+| `stat-refill-value` | `p` | `nextRefill(entries, today).dueDate`, 27 days after the last fill (the earliest the pharmacy refills a 30 day supply), as a short local string, for example `3 Oct`. `none yet` before any fill. |
 | `stat-refill-note` | `p` | Second line, for example `in 9 days`, `due today`, `due 2 days ago`. Starts `hidden`. |
 
 Labels `stat-surplus-label`, `stat-balance-label`, `stat-runout-label`, `stat-refill-label` are

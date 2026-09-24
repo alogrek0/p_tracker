@@ -14,7 +14,7 @@ import { registerServiceWorker } from "./sw-register.js";
  * drift, because a version shown in Settings that does not match the worker
  * actually serving the app is worse than showing nothing.
  */
-const APP_VERSION = "5";
+const APP_VERSION = "6";
 
 /**
  * True when reloading now would destroy something the user is part way through.
