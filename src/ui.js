@@ -620,13 +620,19 @@ function renderRow(row, gapMap, tpl) {
   if (row.kind === "estimated") {
     // Derived, not stored. No id, so nothing to edit or delete. See
     // CLAUDE.md invariant 2 for why nothing like this is ever written down.
+    // The one action offered is logging the real dose, which replaces the
+    // estimate on the next read.
     node.dataset.kind = "estimated";
     node.removeAttribute("data-id");
+    node.dataset.date = row.date;
+    node.dataset.slot = row.slot;
+    node.dataset.qty = String(row.qty);
     badge.textContent = "EST";
     label.textContent = `${SLOT_NAMES[row.slot]} assumed`;
     detail.textContent = "no dose logged, the plan was used";
     qty.textContent = fmt(row.qty);
-    editBtn.hidden = true;
+    editBtn.textContent = "Log actual";
+    editBtn.dataset.action = "log-estimated";
     deleteBtn.hidden = true;
     return node;
   }
@@ -910,8 +916,12 @@ function syncDialogFields(type) {
   setHidden(el("entry-plan-pm-field"), type !== "settings");
 }
 
-/** @param {string|null} id */
-function openDialog(id) {
+/**
+ * @param {string|null} id
+ * @param {{ date: DateKey, slot: "am"|"pm", qty: number }} [prefill]
+ *   New dose only: the estimated slot being replaced by a real one.
+ */
+function openDialog(id, prefill) {
   const today = todayKey();
   const sum = summary(appState.entries, today);
   const dialog = el("entry-dialog");
@@ -938,12 +948,12 @@ function openDialog(id) {
     el("entry-delete").hidden = existing.type === "setup";
     syncDialogFields(existing.type);
   } else {
-    el("entry-dialog-title").textContent = "Add entry";
+    el("entry-dialog-title").textContent = prefill ? "Log actual dose" : "Add entry";
     el("entry-id").value = "";
     el("entry-type").value = "dose";
-    el("entry-date").value = today;
-    el("entry-slot").value = "am";
-    el("entry-qty").value = String(sum.effective.plan.am);
+    el("entry-date").value = prefill ? prefill.date : today;
+    el("entry-slot").value = prefill ? prefill.slot : "am";
+    el("entry-qty").value = String(prefill ? prefill.qty : sum.effective.plan.am);
     el("entry-prescribed").value = String(sum.effective.prescribedPerDay);
     el("entry-plan-am").value = String(sum.effective.plan.am);
     el("entry-plan-pm").value = String(sum.effective.plan.pm);
@@ -1155,6 +1165,15 @@ function onAppClick(ev) {
       const row = target.closest(".entry");
       if (!row || !row.dataset.id) return;
       openDialog(row.dataset.id);
+      break;
+    }
+
+    case "log-estimated": {
+      const row = target.closest(".entry");
+      if (!row) return;
+      const { date, slot, qty } = row.dataset;
+      if (!isValidDateKey(date) || (slot !== "am" && slot !== "pm")) return;
+      openDialog(null, { date, slot, qty: Number(qty) });
       break;
     }
 

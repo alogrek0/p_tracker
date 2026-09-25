@@ -182,9 +182,12 @@ One clone per rendered row. Selectors inside the clone:
 | `setup` | the first run bottle count | neutral left edge |
 | `settings` | a dated settings change | neutral left edge |
 
-`estimated` rows are derived, not stored. They have no entry id, so hide
-`.entry__edit` and `.entry__delete` on them, or give them an action that opens
-the dialog prefilled to create the missing dose.
+`estimated` rows are derived, not stored. They have no entry id, so
+`.entry__delete` is hidden on them. `.entry__edit` is relabelled `Log actual`
+with `data-action="log-estimated"`, and the row carries `data-date`,
+`data-slot` and `data-qty`. It opens `#entry-dialog` titled `Log actual dose`,
+prefilled to create the missing dose. Saving writes one `dose` entry, and the
+estimate disappears because the slot is now logged.
 
 The preferred rendering of a gap is `.entry__gap` inside the recount row, which
 is what the plan asks for. The standalone `data-kind="gap"` styling exists as a
